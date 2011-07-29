@@ -47,6 +47,8 @@ namespace Barabas.DBus.Server
 		
 		private Barabas.Client.Database database;
 	
+		private Gee.Map<int, Search> current_searches;
+	
 		public MainServer(GLib.MainLoop loop) throws Barabas.Client.DatabaseError
 		{
 			this.main_loop = loop;
@@ -58,6 +60,8 @@ namespace Barabas.DBus.Server
 			this.client_connection.user_password_authentication_request.connect(() => {
 				user_password_authentication_request();
 			});
+			
+			current_searches = new Gee.HashMap<int, Search>();
 			
 			Bus.own_name (BusType.SESSION,
 			              "be.ac.ua.comp.Barabas",
@@ -118,6 +122,41 @@ namespace Barabas.DBus.Server
 		public void connect_cancel()
 		{
 			client_connection.connect_cancel();
+		}
+
+		private int find_free_search_key()
+			{
+				int id = 0;
+				while (id in current_searches.keys)
+				{
+					id++;
+				}
+				return id;
+			}		
+
+		public int search(string search_query)
+		{
+			Search search = new Search(search_query, database);
+			int id = find_free_search_key();
+			string search_object_path = "/be/ac/ua/comp/Barabas/searches/" + id.to_string();
+			current_searches.set(id, search);
+			
+			search.add_result.connect((file_id) => {
+				string result_object_path = search_object_path + "/" + file_id.to_string();
+				dbus_connection.register_object(result_object_path,
+				               new SyncedFile(Client.SyncedFile.from_remote(database, file_id)));
+			});
+			search.start_search();
+			
+			search.on_freed_all.connect(() => {
+				Search to_remove = current_searches.get(id);
+				//current_searches.unset(id);
+				//dbus_connection.unregister_object (to_remove);
+			});
+			
+			dbus_connection.register_object (search_object_path, search);
+			
+			return id;
 		}
 
 		/*public void request_file_info(int remote_id)

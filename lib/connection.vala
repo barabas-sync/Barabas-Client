@@ -53,6 +53,12 @@ namespace Barabas.Client
 		public Connection(Database database)
 		{
 			this.database = database;
+			this.status_changed.connect((status, msg) => {
+				if (status == ConnectionStatus.CONNECTED)
+				{
+					queue_command(new DownloadLogCommand(database, 0));
+				}
+			});
 			enabled_authentication_methods = new Gee.LinkedList<string>();
 		
 			current_request = null;

@@ -26,7 +26,7 @@ namespace Barabas.Client
 		public Database() throws DatabaseError
 		{
 			string path = Path.build_filename(Environment.get_user_data_dir(), "barabas");
-			string db_file = Path.build_filename(path, "barabas-0.1.5.sqlite");
+			string db_file = Path.build_filename(path, "barabas-0.1.6.sqlite");
 			if (!FileUtils.test(path, GLib.FileTest.IS_DIR))
 			{
 				DirUtils.create_with_parents(path, 0770);
@@ -50,12 +50,8 @@ namespace Barabas.Client
 		public void install ()
 		{
 			var stmt1 = prepare ("CREATE TABLE SyncedFile (
-					ID INTEGER PRIMARY KEY AUTOINCREMENT,
-					remoteID INTEGER,
-					fileURI TEXT,
-					parentURI TEXT,
+					ID PRIMARY KEY,
 					displayName VARCHAR (256),
-					status INTEGER,
 					mimetype VARCHAR(64)
 				);");
 			/* VARCHAR (256) for displayName seems sensible. Most FS's only allows
@@ -111,7 +107,8 @@ namespace Barabas.Client
 	
 	errordomain DatabaseError
 	{
-		DATABASE_NOT_OPENED
+		DATABASE_NOT_OPENED,
+		INSERT_ERROR
 	}
 
 }
