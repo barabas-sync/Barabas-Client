@@ -75,5 +75,10 @@ namespace Barabas.DBus.Server
 		}
 		
 		internal signal void add_result(int64 file_id);
+		
+		protected override void do_register(string path, DBusConnection connection)
+		{
+			connection.register_object(path, this);
+		}
 	}
 }

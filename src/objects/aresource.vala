@@ -23,6 +23,26 @@ namespace Barabas.DBus.Server
 	public abstract class AResource : Object
 	{
 		private int dbus_ref_count;
+		protected DBusConnection dbus_connection;
+		protected string dbus_path;
+	
+		protected abstract void do_register(string path, DBusConnection connection);
+	
+		internal virtual void publish(string path, DBusConnection connection)
+		{
+			this.dbus_connection = connection;
+			this.dbus_path = path;
+			do_register(path, connection);
+		}
+		
+		internal virtual void unpublish()
+		{
+		}
+	
+		internal void refcount()
+		{
+			dbus_ref_count++;
+		}
 	
 		public void free()
 		{
@@ -30,6 +50,7 @@ namespace Barabas.DBus.Server
 		
 			if (dbus_ref_count == 0)
 			{
+				unpublish();
 				on_freed_all();
 			}
 		}

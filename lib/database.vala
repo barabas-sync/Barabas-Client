@@ -26,7 +26,7 @@ namespace Barabas.Client
 		public Database() throws DatabaseError
 		{
 			string path = Path.build_filename(Environment.get_user_data_dir(), "barabas");
-			string db_file = Path.build_filename(path, "barabas-0.1.6.sqlite");
+			string db_file = Path.build_filename(path, "barabas-0.1.12.sqlite");
 			if (!FileUtils.test(path, GLib.FileTest.IS_DIR))
 			{
 				DirUtils.create_with_parents(path, 0770);
@@ -50,7 +50,8 @@ namespace Barabas.Client
 		public void install ()
 		{
 			var stmt1 = prepare ("CREATE TABLE SyncedFile (
-					ID PRIMARY KEY,
+					ID INTEGER PRIMARY KEY AUTOINCREMENT,
+					remoteID INTEGER(8),
 					displayName VARCHAR (256),
 					mimetype VARCHAR(64)
 				);");
@@ -68,15 +69,18 @@ namespace Barabas.Client
 					fileID INTEGER,
 					tag VARCHAR (128),
 					status INTEGER,
+					PRIMARY KEY(fileID, tag),
 					FOREIGN KEY(fileID) REFERENCES SyncedFile (ID)
-						ON DELETE CASCADE
+						    ON DELETE CASCADE
 				);");
 			stmt2.step ();
 		
 			var stmt3 = prepare ("CREATE TABLE SyncedFileVersion (
 					ID INTEGER PRIMARY KEY,
-					fileRemoteID INTEGER,
-					timeEdited TIMESTAMP
+					fileID INTEGER,
+					timeEdited TIMESTAMP,
+					FOREIGN KEY(fileID) REFERENCES SyncedFile(ID)
+					        ON DELETE CASCADE
 				);");
 			stmt3.step();
 		
@@ -90,6 +94,17 @@ namespace Barabas.Client
 					local BOOLEAN NOT NULL
 				);");
 			stmt4.step();
+			
+			var stmt5 = prepare("CREATE TABLE LocalFile (
+			        ID INTEGER PRIMARY KEY AUTOINCREMENT,
+			        fileID INTEGER,
+			        uri TEXT,
+			        parentURI TEXT,
+			        displayName TEXT,
+			        FOREIGN KEY(fileID) REFERENCES SyncedFile(ID)
+			                ON DELETE CASCADE
+			    );");
+			stmt5.step();
 		}
 	
 		public Sqlite.Statement prepare(string sql)
@@ -102,6 +117,11 @@ namespace Barabas.Client
 		public int64 last_insert_row_id()
 		{
 			return database.last_insert_rowid();
+		}
+		
+		public string errmsg()
+		{
+			return database.errmsg();
 		}
 	}
 	

@@ -48,6 +48,7 @@ namespace Barabas.DBus.Server
 		private Barabas.Client.Database database;
 	
 		private Gee.Map<int, Search> current_searches;
+		private LocalFileResourceManager local_file_resource_manager;
 	
 		public MainServer(GLib.MainLoop loop) throws Barabas.Client.DatabaseError
 		{
@@ -74,6 +75,7 @@ namespace Barabas.DBus.Server
 		private void on_bus_aquired(DBusConnection connection, string name)
 		{
 			this.dbus_connection = connection;
+			local_file_resource_manager = new LocalFileResourceManager(connection);
 			try
 			{
 				this.dbus_connection.register_object ("/be/ac/ua/comp/Barabas", this);
@@ -158,37 +160,17 @@ namespace Barabas.DBus.Server
 			
 			return id;
 		}
-
-		/*public void request_file_info(int remote_id)
+		
+		public int get_file_id_for_uri(string uri)
 		{
-			this.client.request_file_info(remote_id, (info) => { file_info_received(info); });
+			return local_file_resource_manager.get_id_for_uri(uri, (the_uri) => {
+				Client.LocalFile local_file_client = Client.LocalFile.from_uri(uri, database);
+				LocalFile local_file = new LocalFile(local_file_client, database);
+				return local_file;
+			});
 		}
 	
-		public signal void file_info_received(FileInfo info);
-
-		public string get_file_path(string uri)
-		{
-			string id = uri.hash().to_string();
-			if (id in requested_files)
-			{
-				return id;
-			}
-			else
-			{
-				SyncedFile file = SyncedFile.find(database, uri);
-			
-				if (publish_file(file))
-				{
-					return id;
-				}
-				else
-				{
-					return "";
-				}
-			}
-		}
-	
-		public string get_file_path_for_remote(int remote_id)
+		/* public string get_file_path_for_remote(int remote_id)
 		{
 			SyncedFile? file = SyncedFile.find_by_remote(database, remote_id);
 		

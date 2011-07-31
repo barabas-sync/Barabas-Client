@@ -44,17 +44,24 @@ namespace Barabas.DBus.Server
 			return client_synced_file.ID;
 		}
 		
-		public void tag(string tag)
+		public bool tag(string tag)
 		{
+			return client_synced_file.tag(tag);
 		}
 		
 		public void untag(string tag)
 		{
+			client_synced_file.untag(tag);
 		}
 		
 		public string[] tags()
 		{
-			return {};
+			return client_synced_file.tags();
+		}
+		
+		protected override void do_register(string path, DBusConnection connection)
+		{
+			connection.register_object(path, this);
 		}
 	}
 }
