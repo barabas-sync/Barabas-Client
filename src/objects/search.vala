@@ -39,8 +39,10 @@ namespace Barabas.DBus.Server
 			return results.to_array();
 		}
 		
-		internal void start_search()
+		internal override void publish(string path, DBusConnection connection)
 		{
+			base.publish(path, connection);
+		
 			string[] tags = search_query.split(" ");
 			string tag_list = "@tag_0";
 			for(int tag_no = 1; tag_no < tags.length; tag_no++)
@@ -56,25 +58,21 @@ namespace Barabas.DBus.Server
 			
 			for(int tag_no = 0; tag_no < tags.length; tag_no++)
 			{
-				stdout.printf("T: %s\n", tags[tag_no]);
 				stmt.bind_text(stmt.bind_parameter_index("@tag_" + tag_no.to_string()), tags[tag_no]);
 			}
-			
-			stdout.printf("EXEC: %s\n", tag_list);
-			
+
 			int rc = stmt.step();
-			stdout.printf("EXEC: %s\n", stmt.sql());
-		
 			while (rc == Sqlite.ROW)
 			{
 				int64 file_id = stmt.column_int64(0);
 				results.add(file_id);
-				add_result(file_id);
 				rc = stmt.step();
+				
+				// TODO: use statement istead of complete new query when not in cache
+				SyncedFile sf = new SyncedFile(Client.SyncedFile.from_ID(database, file_id));
+				sf.publish(path + "/" + file_id.to_string(), connection);
 			}
 		}
-		
-		internal signal void add_result(int64 file_id);
 		
 		protected override void do_register(string path, DBusConnection connection)
 		{

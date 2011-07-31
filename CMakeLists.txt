@@ -20,6 +20,7 @@ vala_precompile(BARABAS_CLIENT_C
                          lib/objects/local_file.vala
                          lib/objects/synced_file.vala
                          lib/objects/synced_file_tag.vala
+                         lib/objects/synced_file_version.vala
                          lib/connection.vala
                          lib/connection_status.vala
                          lib/database.vala
@@ -33,6 +34,7 @@ vala_precompile(BARABAS_DBUS_C
                          src/objects/local_file.vala
                          src/objects/search.vala
                          src/objects/synced_file.vala
+                         src/objects/synced_file_version.vala
                          src/barabas.vala
                          src/local_file_resource_manager.vala
                          src/resource_manager.vala

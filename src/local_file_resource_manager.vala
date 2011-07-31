@@ -50,8 +50,6 @@ namespace Barabas.DBus.Server
 				LocalFile local_file = create_file(uri);
 				object_id = resource_manager.add(local_file);
 				mapped_files.set(uri, object_id);
-				
-				local_file.publish(OBJECT_PATH + object_id.to_string(), dbus_connection);
 				return object_id;
 			}
 		} 

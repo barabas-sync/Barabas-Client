@@ -59,6 +59,33 @@ namespace Barabas.DBus.Server
 			return client_synced_file.tags();
 		}
 		
+		public int64[] versions()
+		{
+			int64[] list = {};
+			foreach (Client.SyncedFileVersion sf in client_synced_file.versions())
+			{
+				list += sf.ID;
+			}
+			return list;
+		}
+		
+		internal override void publish(string path, DBusConnection connection)
+		{
+			base.publish(path, connection);
+		
+			foreach (Client.SyncedFileVersion sf_version in client_synced_file.versions())
+			{
+				SyncedFileVersion version = new SyncedFileVersion(sf_version);
+				version.publish(path + "/versions/" + sf_version.ID.to_string(), connection);
+			}
+		}
+		
+		internal override void unpublish()
+		{
+			base.unpublish();
+			// Todo: unpublish all versions
+		}
+		
 		protected override void do_register(string path, DBusConnection connection)
 		{
 			connection.register_object(path, this);

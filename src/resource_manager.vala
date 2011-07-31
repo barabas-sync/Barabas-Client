@@ -36,9 +36,10 @@ namespace Barabas.DBus.Server
 		
 		public int add(Resource resource)
 		{
+			AResource a_resource = (AResource) resource;
 			int id = find_free_id();
 			mapped_resources.set(id, resource);
-			//resource.publish(path, dbus_connection);
+			a_resource.publish(path + "/" + id.to_string(), dbus_connection);
 			
 			//((AResource)resource).on_freed_all.connect(free_resource, resource);
 			

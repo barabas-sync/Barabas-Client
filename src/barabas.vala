@@ -47,7 +47,7 @@ namespace Barabas.DBus.Server
 		
 		private Barabas.Client.Database database;
 	
-		private Gee.Map<int, Search> current_searches;
+		private ResourceManager<Search> current_searches;
 		private LocalFileResourceManager local_file_resource_manager;
 	
 		public MainServer(GLib.MainLoop loop) throws Barabas.Client.DatabaseError
@@ -62,8 +62,6 @@ namespace Barabas.DBus.Server
 				user_password_authentication_request();
 			});
 			
-			current_searches = new Gee.HashMap<int, Search>();
-			
 			Bus.own_name (BusType.SESSION,
 			              "be.ac.ua.comp.Barabas",
 			              BusNameOwnerFlags.NONE,
@@ -76,6 +74,8 @@ namespace Barabas.DBus.Server
 		{
 			this.dbus_connection = connection;
 			local_file_resource_manager = new LocalFileResourceManager(connection);
+			current_searches = new ResourceManager<Search>(connection,
+			                       "/be/ac/ua/comp/Barabas/searches");
 			try
 			{
 				this.dbus_connection.register_object ("/be/ac/ua/comp/Barabas", this);
@@ -126,39 +126,10 @@ namespace Barabas.DBus.Server
 			client_connection.connect_cancel();
 		}
 
-		private int find_free_search_key()
-			{
-				int id = 0;
-				while (id in current_searches.keys)
-				{
-					id++;
-				}
-				return id;
-			}		
-
 		public int search(string search_query)
 		{
 			Search search = new Search(search_query, database);
-			int id = find_free_search_key();
-			string search_object_path = "/be/ac/ua/comp/Barabas/searches/" + id.to_string();
-			current_searches.set(id, search);
-			
-			search.add_result.connect((file_id) => {
-				string result_object_path = search_object_path + "/" + file_id.to_string();
-				dbus_connection.register_object(result_object_path,
-				               new SyncedFile(Client.SyncedFile.from_remote(database, file_id)));
-			});
-			search.start_search();
-			
-			search.on_freed_all.connect(() => {
-				Search to_remove = current_searches.get(id);
-				//current_searches.unset(id);
-				//dbus_connection.unregister_object (to_remove);
-			});
-			
-			dbus_connection.register_object (search_object_path, search);
-			
-			return id;
+			return current_searches.add(search);
 		}
 		
 		public int get_file_id_for_uri(string uri)

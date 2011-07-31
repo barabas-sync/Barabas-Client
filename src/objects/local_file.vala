@@ -24,6 +24,8 @@ namespace Barabas.DBus.Server
 	{
 		private Barabas.Client.LocalFile client_local_file;
 		private Barabas.Client.Database database;
+		
+		private SyncedFile synced_file;
 	
 		public LocalFile(Barabas.Client.LocalFile client_local_file,
 		                 Barabas.Client.Database database)
@@ -31,6 +33,8 @@ namespace Barabas.DBus.Server
 			this.client_local_file = client_local_file;
 			this.client_local_file.synced.connect((file) => { synced(); });
 			this.database = database;
+			
+			this.synced_file = null;
 		}
 		
 		public string get_uri()
@@ -63,30 +67,28 @@ namespace Barabas.DBus.Server
 			{
 				stdout.printf("Register\n");
 				Client.SyncedFile client_synced_file =
-				    Client.SyncedFile.from_remote(database,
-				                                  client_local_file.syncedID);
-				SyncedFile synced_file = new SyncedFile(client_synced_file);
-				dbus_connection.register_object(dbus_path + "/synced_file", synced_file);
+				    Client.SyncedFile.from_ID(database,
+				                              client_local_file.syncedID);
+				synced_file = new SyncedFile(client_synced_file);
+				synced_file.publish(dbus_path + "/synced_file", connection);
 			}
 			
-			stdout.printf("Connect to register\n");
 			client_local_file.synced.connect(on_synced);
 		}
 		
-		internal void unpublish()
+		internal override void unpublish()
 		{
 			base.unpublish();
-			if (is_synced())
+			if (synced_file != null)
 			{
-				//TODO: unpublish synced file
+				synced_file.unpublish();
 			}
 		}
 		
 		private void on_synced(Client.SyncedFile client_synced_file)
 		{
-			stdout.printf("Register ON SYNC\n");
-			SyncedFile synced_file = new SyncedFile(client_synced_file);
-			dbus_connection.register_object(dbus_path + "/synced_file", synced_file);
+			synced_file = new SyncedFile(client_synced_file);
+			synced_file.publish(dbus_path + "/synced_file", dbus_connection);
 		}
 		
 		protected override void do_register(string path, DBusConnection connection)

@@ -32,6 +32,7 @@ namespace Barabas.Client
 		public string mimetype { get; private set; }
 		
 		private Gee.Map<string, SyncedFileTag> tag_list;
+		private Gee.List<SyncedFileVersion> version_list;
 		private Database database;
 		private static Gee.Map<string, SyncedFile> cache = new Gee.HashMap<string, SyncedFile>();
 
@@ -56,6 +57,7 @@ namespace Barabas.Client
 			this.mimetype = mimetype;			
 			this.database = database;
 			this.tag_list = new Gee.HashMap<string, SyncedFileTag>();
+			this.version_list = new Gee.ArrayList<SyncedFileVersion>();
 			
 			Sqlite.Statement stmt = database.prepare("INSERT INTO SyncedFile
 			                 (remoteID, displayName, mimetype)
@@ -77,6 +79,7 @@ namespace Barabas.Client
 			this.mimetype = mimetype;			
 			this.database = database;
 			this.tag_list = new Gee.HashMap<string, SyncedFileTag>();
+			this.version_list = new Gee.ArrayList<SyncedFileVersion>();
 			
 			Sqlite.Statement stmt = database.prepare("INSERT INTO SyncedFile
 			                 (displayName, mimetype)
@@ -93,16 +96,16 @@ namespace Barabas.Client
 		private static SyncedFile.from_result(Database database, Sqlite.Statement stmt)
 		{
 			this.database = database;
-			stdout.printf("Created tag list, stop bitching...\n");
 			ID = stmt.column_int64(COLUMN_ID);
 			remoteID = stmt.column_int64(COLUMN_REMOTE_ID);
 			display_name = stmt.column_text(COLUMN_DISPLAY_NAME);
 			mimetype = stmt.column_text(COLUMN_MIMETYPE);
 		
 			this.tag_list = SyncedFileTag.find_tags_for_file(this, database);
+			this.version_list = SyncedFileVersion.find_versions_for_file(this, database);
 		}
 
-		public static SyncedFile? from_remote(Database database, int64 ID)
+		public static SyncedFile? from_ID(Database database, int64 ID)
 		{
 			assert_has_cache();
 			string key = ID.to_string();
@@ -115,6 +118,31 @@ namespace Barabas.Client
 				Sqlite.Statement find_stmt = database.prepare("SELECT * FROM SyncedFile
 				               WHERE ID=@ID");
 				find_stmt.bind_int64(find_stmt.bind_parameter_index("@ID"), ID);
+				int rc = find_stmt.step();
+				if (rc == Sqlite.ROW)
+				{
+					return new SyncedFile.from_result(database, find_stmt);
+				}
+				else
+				{
+					return null;
+				}
+			}
+		}
+
+		public static SyncedFile? from_remote(Database database, int64 remoteID)
+		{
+			assert_has_cache();
+			string key = remoteID.to_string();
+			if (SyncedFile.cache.has_key(key))
+			{
+				return cache.get(key);
+			}
+			else
+			{
+				Sqlite.Statement find_stmt = database.prepare("SELECT * FROM SyncedFile
+				               WHERE remoteID=@remoteID");
+				find_stmt.bind_int64(find_stmt.bind_parameter_index("@remoteID"), remoteID);
 				int rc = find_stmt.step();
 				if (rc == Sqlite.ROW)
 				{
@@ -163,16 +191,15 @@ namespace Barabas.Client
 			return tag_array;
 		}
 	
-		public int[] versions()
+		public Gee.List<SyncedFileVersion> versions()
 		{
-			//Sqlite.Statement find_stmt = database.prepare("SELECT ID FROM SyncedFileVersion WHERE fileRemoteID=@fileRemoteID;");
-			//find_stmt.bind_int(find_stmt.bind_parameter_index("@fileRemoteID"), (int)remote_id);
-			int[] vs = {};
-			/*while (find_stmt.step() == Sqlite.ROW)
-			{
-				vs += find_stmt.column_int(0);
-			}*/
-			return vs;
+			return version_list.read_only_view;
+		}
+		
+		internal void remote_new_version(SyncedFileVersion sf_version)
+		{
+			version_list.add(sf_version);
+			new_version(sf_version);
 		}
 	
 		private void internal_tag(string tag, bool synced)
@@ -201,7 +228,6 @@ namespace Barabas.Client
 			}
 			SyncedFileTag sf_tag = tag_list[tag];
 			
-			
 			if (synced)
 			{
 				sf_tag.remove();
@@ -217,7 +243,6 @@ namespace Barabas.Client
 		
 		internal void tag_from_remote(string tag)
 		{
-			// TODO: fix the situatation whree local tag is set to new
 			internal_tag(tag, true);
 		}
 		
@@ -227,6 +252,8 @@ namespace Barabas.Client
 		}
 	
 		public signal void tagged(string tag);
-		public signal void untagged(string tag);		
+		public signal void untagged(string tag);
+		
+		public signal void new_version(SyncedFileVersion new_version);	
 	}
 }

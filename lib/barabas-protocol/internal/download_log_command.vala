@@ -95,6 +95,10 @@ namespace Barabas.Client
 					}
 					else if (type == "new-version")
 					{
+						int64 remoteID = json_entry.get_int_member("version-id");
+						SyncedFileVersion sf_version = new SyncedFileVersion.from_remote(
+						    remoteID, file_id, 0, database);
+						file.remote_new_version(sf_version);
 					}
 				}
 			}

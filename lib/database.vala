@@ -26,7 +26,7 @@ namespace Barabas.Client
 		public Database() throws DatabaseError
 		{
 			string path = Path.build_filename(Environment.get_user_data_dir(), "barabas");
-			string db_file = Path.build_filename(path, "barabas-0.1.12.sqlite");
+			string db_file = Path.build_filename(path, "barabas-0.1.13.sqlite");
 			if (!FileUtils.test(path, GLib.FileTest.IS_DIR))
 			{
 				DirUtils.create_with_parents(path, 0770);
@@ -76,8 +76,9 @@ namespace Barabas.Client
 			stmt2.step ();
 		
 			var stmt3 = prepare ("CREATE TABLE SyncedFileVersion (
-					ID INTEGER PRIMARY KEY,
-					fileID INTEGER,
+					ID INTEGER PRIMARY KEY AUTOINCREMENT,
+					fileID INTEGER(8),
+					remoteID INTEGER(8),
 					timeEdited TIMESTAMP,
 					FOREIGN KEY(fileID) REFERENCES SyncedFile(ID)
 					        ON DELETE CASCADE
