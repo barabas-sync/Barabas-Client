@@ -152,11 +152,6 @@ namespace Barabas.Client
 	
 		public string[] tags()
 		{
-			if (tag_list.size == 0)
-			{
-				// TODO: see if still needed
-				return {""}; // Hack, returning an empty array crashes for some reason...
-			}
 			string[] tag_array = {};
 			foreach (SyncedFileTag tag in tag_list.values)
 			{
@@ -164,11 +159,6 @@ namespace Barabas.Client
 				{
 					tag_array += tag.tag;
 				}
-			}
-			if (tag_array.length == 0)
-			{
-				// TODO: see if still needed
-				return {""}; // Hack, returning an empty array crashes for some reason...
 			}
 			return tag_array;
 		}
