@@ -52,6 +52,13 @@ namespace Barabas.DBus.Server
 				mapped_files.set(uri, object_id);
 				return object_id;
 			}
-		} 
+		}
+		
+		public int add(LocalFile local_file)
+		{
+			int object_id = resource_manager.add(local_file);
+			mapped_files.set(local_file.get_uri(), object_id);
+			return object_id;
+		}
 	}
 }

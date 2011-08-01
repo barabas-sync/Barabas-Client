@@ -19,30 +19,49 @@
 
 namespace Barabas.DBus.Server
 {
-	[DBus (name = "be.ac.ua.comp.Barabas.SyncedFileVersion")]
-	public class SyncedFileVersion : AResource
+	[DBus (name = "be.ac.ua.comp.Barabas.Download")]
+	public class Download : AResource
 	{
-		private Client.SyncedFileVersion client_synced_file_version;
+		Client.RequestDownloadCommand download_command;
 	
-		public SyncedFileVersion(Client.SyncedFileVersion sf_version)
+		public Download(Client.RequestDownloadCommand command)
 		{
-			this.client_synced_file_version = sf_version;
+			download_command = command;
+			command.download_started.connect(download_started);
+			command.download_progress.connect(download_progress);
+			command.download_stopped.connect(download_stopped);
 		}
 		
-		public int64 get_id()
+		public void start_request()
 		{
-			return client_synced_file_version.ID;
+			stdout.printf("?.???\n");
+			start_requested(download_command);
 		}
 		
-		public int get_datetimeedited()
+		public signal void started();
+		public signal void progress(int64 progress, int64 total);
+		public signal void stopped();
+		
+		private void download_started()
 		{
-			return client_synced_file_version.datetimeEdited;
+			started();
 		}
-
+		
+		private void download_progress(int64 the_progress, int64 total)
+		{
+			progress(the_progress, total);
+		}
+		
+		private void download_stopped()
+		{
+			stopped();
+		}
+		
+		internal signal void start_requested(Client.RequestDownloadCommand command);
+		
 		protected override void do_register(string path, DBusConnection connection)
 		{
 			connection.register_object(path, this);
 		}
 	}
 }
-	

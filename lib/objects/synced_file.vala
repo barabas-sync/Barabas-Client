@@ -149,6 +149,11 @@ namespace Barabas.Client
 				return null;
 			}
 		}
+		
+		public LocalFile? get_local_file()
+		{
+			return LocalFile.from_file_id(ID, database);
+		}
 
 		public bool tag(string tag)
 		{

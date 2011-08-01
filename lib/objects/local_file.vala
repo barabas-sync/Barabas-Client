@@ -46,6 +46,24 @@ namespace Barabas.Client
 			this.database = null;
 		}
 		
+		public LocalFile.local_copy(string uri, SyncedFile synced_file, Database database)
+		{
+			this.database = database;
+			this.syncedID = synced_file.ID;
+			this.uri = uri;
+			
+			GLib.File file = GLib.File.new_for_uri(uri);
+			this.parent_uri = file.get_parent().get_uri();
+			GLib.FileInfo file_info = file.query_info(
+			           GLib.FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME,
+			           GLib.FileQueryInfoFlags.NONE,
+			           null);
+			this.display_name = file_info.get_display_name();
+			this.mimetype = synced_file.mimetype;
+			
+			insert();
+		}
+		
 		private LocalFile.from_statement(Sqlite.Statement stmt, Database database)
 		{
 			this.database = database;
@@ -65,20 +83,12 @@ namespace Barabas.Client
 			}
 		
 			// Let's create a sync file for this.
-			string mime_type = "unknown";
-			SyncedFile synced_file = new SyncedFile.create(database, display_name, mime_type);
-			
-			Sqlite.Statement insert_stmt = database.prepare("INSERT INTO 
-			         LocalFile (fileID, uri, parentURI, displayName)
-			         VALUES (@fileID, @uri, @parentURI, @displayName);");
-			insert_stmt.bind_int64(insert_stmt.bind_parameter_index("@fileID"), synced_file.ID);
-			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@uri"), uri);
-			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@parentURI"), parent_uri);
-			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@displayName"), display_name);
-			insert_stmt.step();
-			this.ID = database.last_insert_row_id();
-			
+			SyncedFile synced_file = new SyncedFile.create(database, display_name, mimetype);
+			syncedID = synced_file.ID;
 			this.database = database;
+			
+			insert();
+			
 			synced(synced_file);
 			return synced_file;
 		}
@@ -86,6 +96,22 @@ namespace Barabas.Client
 		public bool is_synced()
 		{
 			return database != null;
+		}
+		
+		public static LocalFile? from_file_id(int64 ID, Database database)
+		{
+			Sqlite.Statement select = database.prepare("SELECT * FROM LocalFile
+			    WHERE fileID = @fileID;");
+			select.bind_int64(select.bind_parameter_index("@fileID"), ID);
+			
+			if (select.step() == Sqlite.ROW)
+			{
+				return new LocalFile.from_statement(select, database);
+			}
+			else
+			{
+				return null;
+			}
 		}
 		
 		public static LocalFile from_uri(string uri, Database database)
@@ -109,5 +135,19 @@ namespace Barabas.Client
 		}
 		
 		public signal void synced(SyncedFile synced_file);
+		
+		private void insert()
+		{
+			Sqlite.Statement insert_stmt = database.prepare("INSERT INTO 
+			         LocalFile (fileID, uri, parentURI, displayName)
+			         VALUES (@fileID, @uri, @parentURI, @displayName);");
+			insert_stmt.bind_int64(insert_stmt.bind_parameter_index("@fileID"), syncedID);
+			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@uri"), uri);
+			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@parentURI"), parent_uri);
+			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@displayName"), display_name);
+			insert_stmt.step();
+			
+			this.ID = database.last_insert_row_id();
+		}
 	}
 }

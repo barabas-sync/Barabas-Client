@@ -20,6 +20,7 @@ vala_precompile(BARABAS_CLIENT_C
                          lib/barabas-protocol/new_file_command.vala
                          lib/barabas-protocol/new_tag_command.vala
                          lib/barabas-protocol/remove_tag_command.vala
+                         lib/barabas-protocol/request_download_command.vala
                          lib/caches/cache.vala
                          lib/caches/synced_file_cache.vala
                          lib/objects/local_file.vala
@@ -36,6 +37,7 @@ add_library(barabas-client ${BARABAS_CLIENT_C})
 
 vala_precompile(BARABAS_DBUS_C
                          src/objects/aresource.vala
+                         src/objects/download.vala
                          src/objects/local_file.vala
                          src/objects/search.vala
                          src/objects/synced_file.vala

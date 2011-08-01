@@ -77,6 +77,22 @@ namespace Barabas.Client
 			return list;
 		}
 		
+		public static SyncedFileVersion? from_id(int64 id, Database database)
+		{
+			Sqlite.Statement select = database.prepare("SELECT * FROM SyncedFileVersion
+			                                            WHERE ID=@ID");
+			select.bind_int64(select.bind_parameter_index("@ID"), id);
+			
+			if (select.step() == Sqlite.ROW)
+			{
+				return new SyncedFileVersion.from_statement(select, database);
+			}
+			else
+			{
+				return null;
+			}
+		}
+		
 		private void insert()
 		{
 			Sqlite.Statement stmt = database.prepare("INSERT INTO SyncedFileVersion

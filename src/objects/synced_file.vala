@@ -39,9 +39,19 @@ namespace Barabas.DBus.Server
 			return client_synced_file.mimetype;
 		}
 		
-		public int64 get_remote_id()
+		public int64 get_id()
 		{
 			return client_synced_file.ID;
+		}
+		
+		public string get_local_uri()
+		{
+			Client.LocalFile? local_file = client_synced_file.get_local_file();
+			if (local_file == null)
+			{
+				return "";
+			}
+			return local_file.uri;
 		}
 		
 		public bool tag(string tag)
@@ -67,6 +77,11 @@ namespace Barabas.DBus.Server
 				list += sf.ID;
 			}
 			return list;
+		}
+		
+		public int64 get_latest_version()
+		{
+			return client_synced_file.versions().last().ID;
 		}
 		
 		internal override void publish(string path, DBusConnection connection)

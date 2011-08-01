@@ -48,6 +48,7 @@ namespace Barabas.DBus.Server
 		private Barabas.Client.Database database;
 	
 		private ResourceManager<Search> current_searches;
+		private ResourceManager<Download> current_downloads;
 		private LocalFileResourceManager local_file_resource_manager;
 	
 		public MainServer(GLib.MainLoop loop) throws Barabas.Client.DatabaseError
@@ -76,6 +77,8 @@ namespace Barabas.DBus.Server
 			local_file_resource_manager = new LocalFileResourceManager(connection);
 			current_searches = new ResourceManager<Search>(connection,
 			                       "/be/ac/ua/comp/Barabas/searches");
+			current_downloads = new ResourceManager<Download>(connection,
+			                       "/be/ac/ua/comp/Barabas/downloads");
 			try
 			{
 				this.dbus_connection.register_object ("/be/ac/ua/comp/Barabas", this);
@@ -139,6 +142,32 @@ namespace Barabas.DBus.Server
 				LocalFile local_file = new LocalFile(local_file_client, database);
 				return local_file;
 			});
+		}
+		
+		public int create_local_copy_for_id(int64 id, string uri)
+		{
+			Client.SyncedFile client_synced_file = Client.SyncedFile.from_ID(database, id);
+			Client.LocalFile client_local_file =
+			    new Client.LocalFile.local_copy(uri,
+			                                    client_synced_file,
+			                                    database);
+			LocalFile local_file = new LocalFile(client_local_file, database);
+			return local_file_resource_manager.add(local_file);
+		}
+		
+		public int download(string uri, int64 version_id)
+		{
+			Client.SyncedFileVersion version = Client.SyncedFileVersion.from_id(version_id, database);
+			Client.RequestDownloadCommand download_command =
+			    new Client.RequestDownloadCommand(version, uri);
+			Download download = new Download(download_command);
+			int id = current_downloads.add(download);
+			
+			download.start_requested.connect( (download_command) => {
+				stdout.printf("QUEUEING\n");
+				client_connection.queue_command(download_command);
+			});
+			return id;
 		}
 	
 		/* public string get_file_path_for_remote(int remote_id)
