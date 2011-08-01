@@ -27,31 +27,20 @@ namespace Barabas.Client
 		private const int COLUMN_MIMETYPE = 3;
 
 		public int64 ID { get; private set; }
-		private int64 remoteID { get; private set; }
+		public int64 remoteID { get; private set; }
 		public string display_name { get; set; }
 		public string mimetype { get; private set; }
 		
 		private Gee.Map<string, SyncedFileTag> tag_list;
 		private Gee.List<SyncedFileVersion> version_list;
 		private Database database;
-		private static Gee.Map<string, SyncedFile> cache = new Gee.HashMap<string, SyncedFile>();
-
-
-		private static void assert_has_cache()
-		{
-			if (cache == null)
-			{
-				stderr.printf("Is their any reason we have private statics?");
-			}
-			cache = new Gee.HashMap<string, SyncedFile>();
-		}
+		internal static SyncedFileCache cache;
 
 		internal SyncedFile(Database database,
 		                    int64 remoteID,
 		                    string name,
 		                    string mimetype) throws DatabaseError
 		{
-			assert_has_cache();
 			this.remoteID = remoteID;
 			this.display_name = name;
 			this.mimetype = mimetype;			
@@ -70,11 +59,11 @@ namespace Barabas.Client
 				throw new DatabaseError.INSERT_ERROR("");
 			}
 			this.ID = database.last_insert_row_id();
+			cache.add(this);
 		}
 		
 		internal SyncedFile.create(Database database, string name, string mimetype)
 		{
-			assert_has_cache();
 			this.display_name = name;
 			this.mimetype = mimetype;			
 			this.database = database;
@@ -91,9 +80,10 @@ namespace Barabas.Client
 				throw new DatabaseError.INSERT_ERROR("");
 			}
 			this.ID = database.last_insert_row_id();
+			cache.add(this);
 		}
 	
-		private static SyncedFile.from_result(Database database, Sqlite.Statement stmt)
+		private SyncedFile.from_result(Database database, Sqlite.Statement stmt)
 		{
 			this.database = database;
 			ID = stmt.column_int64(COLUMN_ID);
@@ -103,15 +93,14 @@ namespace Barabas.Client
 		
 			this.tag_list = SyncedFileTag.find_tags_for_file(this, database);
 			this.version_list = SyncedFileVersion.find_versions_for_file(this, database);
+			cache.add(this);
 		}
 
 		public static SyncedFile? from_ID(Database database, int64 ID)
 		{
-			assert_has_cache();
-			string key = ID.to_string();
-			if (SyncedFile.cache.has_key(key))
+			if (cache.has(ID))
 			{
-				return cache.get(key);
+				return cache.get(ID);
 			}
 			else
 			{
@@ -132,26 +121,32 @@ namespace Barabas.Client
 
 		public static SyncedFile? from_remote(Database database, int64 remoteID)
 		{
-			assert_has_cache();
-			string key = remoteID.to_string();
-			if (SyncedFile.cache.has_key(key))
+			/**
+			 * Technically we could have a remote to ID mapping,
+			 * and make use of the ID to do a cache lookup.
+			 * We don't do this because it is too hard to keep the remote mapping
+			 * in a correct state (and will use memory).
+			 * Also we don't cache for doing the one-query less gain,
+			 * but primarly for the max-one-instance per row assertion.
+			*/
+		
+			Sqlite.Statement find_stmt = database.prepare("SELECT * FROM SyncedFile
+			               WHERE remoteID=@remoteID");
+			find_stmt.bind_int64(find_stmt.bind_parameter_index("@remoteID"), remoteID);
+			int rc = find_stmt.step();
+			if (rc == Sqlite.ROW)
 			{
-				return cache.get(key);
+				int64 ID = find_stmt.column_int64(COLUMN_ID);
+				if (cache.has(ID))
+				{
+					return cache.get(ID);
+				}
+			
+				return new SyncedFile.from_result(database, find_stmt);
 			}
 			else
 			{
-				Sqlite.Statement find_stmt = database.prepare("SELECT * FROM SyncedFile
-				               WHERE remoteID=@remoteID");
-				find_stmt.bind_int64(find_stmt.bind_parameter_index("@remoteID"), remoteID);
-				int rc = find_stmt.step();
-				if (rc == Sqlite.ROW)
-				{
-					return new SyncedFile.from_result(database, find_stmt);
-				}
-				else
-				{
-					return null;
-				}
+				return null;
 			}
 		}
 
@@ -196,6 +191,23 @@ namespace Barabas.Client
 			return version_list.read_only_view;
 		}
 		
+		public bool has_remote()
+		{
+			return remoteID != 0;
+		}
+		
+		internal void set_remote(int64 remoteID)
+		{
+			this.remoteID = remoteID;
+			
+			Sqlite.Statement statement = database.prepare("UPDATE SyncedFile
+			    SET remoteID = @remoteID
+			    WHERE ID = @ID");
+			statement.bind_int64(statement.bind_parameter_index("@remoteID"), remoteID);
+			statement.bind_int64(statement.bind_parameter_index("@ID"), ID);
+			statement.step();
+		}
+		
 		internal void remote_new_version(SyncedFileVersion sf_version)
 		{
 			version_list.add(sf_version);
@@ -209,15 +221,20 @@ namespace Barabas.Client
 			
 			if (tag in tag_list.keys)
 			{
+				if (tag_list[tag].status == SyncedFileTag.Status.NEW)
+				{
+					// Do not resend tagged signal.
+					tag_list[tag].status = status;
+					return;
+				}
 				tag_list[tag].status = status;
 			}
 			else
 			{
-				stdout.printf("CREATE NEW TAG %s\n", tag);
 				SyncedFileTag sf_tag = new SyncedFileTag(tag, this, status, database);
 				tag_list.set(tag, sf_tag);
 			}
-			tagged(tag);
+			tagged(tag, !synced);
 		}
 		
 		private void internal_untag(string tag, bool synced)
@@ -232,13 +249,24 @@ namespace Barabas.Client
 			{
 				sf_tag.remove();
 				tag_list.unset(tag);
+				
+				if (sf_tag.status == SyncedFileTag.Status.DELETED)
+				{
+					// Do not resend untagged signal.
+					return;
+				}
 			}
 			else
 			{
+				if (sf_tag.status == SyncedFileTag.Status.DELETED)
+				{
+					// Do not resend untagged signal.
+					return;
+				}
 				sf_tag.status = SyncedFileTag.Status.DELETED;
 			}
 			
-			untagged(tag);
+			untagged(tag, !synced);
 		}
 		
 		internal void tag_from_remote(string tag)
@@ -251,8 +279,8 @@ namespace Barabas.Client
 			internal_untag(tag, true);
 		}
 	
-		public signal void tagged(string tag);
-		public signal void untagged(string tag);
+		public signal void tagged(string tag, bool local);
+		public signal void untagged(string tag, bool local);
 		
 		public signal void new_version(SyncedFileVersion new_version);	
 	}

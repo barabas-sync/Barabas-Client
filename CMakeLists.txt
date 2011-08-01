@@ -17,6 +17,11 @@ vala_precompile(BARABAS_CLIENT_C
                          lib/barabas-protocol/internal/user_password_login_command.vala
                          lib/barabas-protocol/internal/download_log_command.vala
                          lib/barabas-protocol/icommand.vala
+                         lib/barabas-protocol/new_file_command.vala
+                         lib/barabas-protocol/new_tag_command.vala
+                         lib/barabas-protocol/remove_tag_command.vala
+                         lib/caches/cache.vala
+                         lib/caches/synced_file_cache.vala
                          lib/objects/local_file.vala
                          lib/objects/synced_file.vala
                          lib/objects/synced_file_tag.vala

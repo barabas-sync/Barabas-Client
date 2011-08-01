@@ -52,6 +52,8 @@ namespace Barabas.Client
 
 		public Connection(Database database)
 		{
+			SyncedFile.cache = new SyncedFileCache();
+			SyncedFile.cache.added.connect(on_added_synced_file);
 			this.database = database;
 			this.status_changed.connect((status, msg) => {
 				if (status == ConnectionStatus.CONNECTED)
@@ -156,12 +158,52 @@ namespace Barabas.Client
 			}
 		}
 
+		/* Watch the objects */
+		
+		private void on_added_synced_file(SyncedFile synced_file)
+		{
+			if (! synced_file.has_remote())
+			{
+				NewFileCommand command = new NewFileCommand(synced_file);
+				command.success.connect((file_to_sync) => {
+					file_to_sync.tagged.connect(on_tagged_file);
+					file_to_sync.untagged.connect(on_untagged_file);
+				});
+				queue_command(command);
+			}
+			else
+			{
+				synced_file.tagged.connect(on_tagged_file);
+				synced_file.untagged.connect(on_untagged_file);
+			}
+		}
+		
+		private void on_tagged_file(SyncedFile synced_file, string tag, bool local)
+		{
+			if (local)
+			{
+				NewTagCommand command = new NewTagCommand(synced_file, tag);
+				queue_command(command);
+			}
+		}
+		
+		private void on_untagged_file(SyncedFile synced_file, string tag, bool local)
+		{
+			if (local)
+			{
+				RemoveTagCommand command = new RemoveTagCommand(synced_file, tag);
+				queue_command(command);
+			}
+		}
+
+		/* Network stuff */
+
 		private void send_message(Json.Generator gen)
 		{
 			size_t length;
 			var json_str = gen.to_data(out length);
 			json_str += "\n";
-			stdout.printf("Sending msg: %s", json_str);
+			GLib.log("protocol", LogLevelFlags.LEVEL_INFO, "Send message: %s", json_str);
 			try
 			{
 				connection.output_stream.write(json_str.data);
@@ -214,7 +256,7 @@ namespace Barabas.Client
 			}
 			if (read_status == GLib.IOStatus.NORMAL)
 			{
-				stdout.printf("Received msg: %s", buffer);
+				GLib.log("protocol", LogLevelFlags.LEVEL_INFO, "Received message: %s", buffer);
 				Json.Object message;
 				try
 				{

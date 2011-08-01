@@ -21,7 +21,7 @@ namespace Barabas.DBus.Server
 {
 	public class LocalFileResourceManager
 	{
-		private static const string OBJECT_PATH = "/be/ac/ua/comp/Barabas/local_files/";
+		private static const string OBJECT_PATH = "/be/ac/ua/comp/Barabas/local_files";
 
 		private Gee.Map<string, int> mapped_files;
 		private ResourceManager<LocalFile> resource_manager;
