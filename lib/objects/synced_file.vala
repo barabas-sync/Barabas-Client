@@ -196,6 +196,12 @@ namespace Barabas.Client
 			return version_list.read_only_view;
 		}
 		
+		public void add_version(SyncedFileVersion version)
+		{
+			version_list.add(version);
+			new_version(version, true);
+		}
+		
 		public bool has_remote()
 		{
 			return remoteID != 0;
@@ -216,7 +222,7 @@ namespace Barabas.Client
 		internal void remote_new_version(SyncedFileVersion sf_version)
 		{
 			version_list.add(sf_version);
-			new_version(sf_version);
+			new_version(sf_version, false);
 		}
 	
 		private void internal_tag(string tag, bool synced)
@@ -287,6 +293,6 @@ namespace Barabas.Client
 		public signal void tagged(string tag, bool local);
 		public signal void untagged(string tag, bool local);
 		
-		public signal void new_version(SyncedFileVersion new_version);	
+		public signal void new_version(SyncedFileVersion new_version, bool local);	
 	}
 }

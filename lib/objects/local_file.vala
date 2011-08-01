@@ -114,7 +114,7 @@ namespace Barabas.Client
 			}
 		}
 		
-		public static LocalFile from_uri(string uri, Database database)
+		public static LocalFile? from_uri(string uri, Database database, bool create = true)
 		{
 			Sqlite.Statement select = database.prepare("SELECT * FROM LocalFile
 			    WHERE uri = @uri;");
@@ -126,12 +126,44 @@ namespace Barabas.Client
 			{
 				local_file = new LocalFile.from_statement(select, database);
 			}
-			else
+			else if (create)
 			{
 				local_file = new LocalFile(uri);
 			}
+			else
+			{
+			}	return null;
 			
 			return local_file;
+		}
+		
+		public void rename(string display_name, string uri)
+		{
+			this.display_name = display_name;
+			this.uri = uri;
+			
+			if (database != null)
+			{
+				Sqlite.Statement update_stmt = database.prepare("
+				    UPDATE LocalFile
+				           SET displayName=@displayName, uri=@uri
+				           WHERE ID=@ID");
+				update_stmt.bind_int64(update_stmt.bind_parameter_index("@ID"), ID);
+				update_stmt.bind_text(update_stmt.bind_parameter_index("@uri"), uri);
+				update_stmt.bind_text(update_stmt.bind_parameter_index("@displayName"), display_name);
+				update_stmt.step();
+			}
+		}
+		
+		public void remove()
+		{
+			if (database != null)
+			{
+				Sqlite.Statement delete_stmt = database.prepare("
+				    DELETE FROM LocalFile WHERE ID=@ID");
+				delete_stmt.bind_int64(delete_stmt.bind_parameter_index("@ID"), ID);
+				delete_stmt.step();
+			}
 		}
 		
 		public signal void synced(SyncedFile synced_file);

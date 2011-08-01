@@ -52,6 +52,11 @@ namespace Barabas.Client
 			
 			insert();
 		}
+		
+		public bool is_remote()
+		{
+			return remoteID != 0;
+		}
 	
 		private SyncedFileVersion.from_statement(Sqlite.Statement stmt, Database database)
 		{

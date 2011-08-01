@@ -43,6 +43,7 @@ vala_precompile(BARABAS_DBUS_C
                          src/objects/synced_file.vala
                          src/objects/synced_file_version.vala
                          src/barabas.vala
+                         src/file_monitor_client.vala
                          src/local_file_resource_manager.vala
                          src/resource_manager.vala
                 PACKAGES glib-2.0 gio-2.0 gee-1.0 json-glib-1.0 sqlite3
