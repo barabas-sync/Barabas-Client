@@ -46,6 +46,7 @@ namespace Barabas.DBus.Server
 		private Client.Connection client_connection;
 		
 		private Barabas.Client.Database database;
+		private FileMonitorClient file_monitor_client;
 	
 		private ResourceManager<Search> current_searches;
 		private ResourceManager<Download> current_downloads;
@@ -54,8 +55,15 @@ namespace Barabas.DBus.Server
 		public MainServer(GLib.MainLoop loop) throws Barabas.Client.DatabaseError
 		{
 			this.main_loop = loop;
+			Client.SyncedFile.cache = new Client.SyncedFileCache();
+			Client.LocalFile.cache = new Client.LocalFileCache();
+			
+			Client.LocalFile.cache.added.connect(on_added_local_file);
+			
 			this.database = new Barabas.Client.Database();
+			this.file_monitor_client = new FileMonitorClient(database);
 			this.client_connection = new Client.Connection(database);
+			Client.SyncedFile.cache.added.connect(on_new_synced_file);
 			this.client_connection.status_changed.connect((status, msg) => {
 			    status_changed(current_host, status, msg);
 			});
@@ -94,6 +102,26 @@ namespace Barabas.DBus.Server
 		{
 			stderr.printf("Could not own bus\n");
 			this.main_loop.quit();
+		}
+		
+		private void on_added_local_file(Client.LocalFile local_file)
+		{
+			local_file.initiate_upload.connect(on_initiate_upload);
+		}
+		
+		private void on_initiate_upload(Client.LocalFile local_file,
+		                                Client.SyncedFile synced_file,
+		                                Client.SyncedFileVersion file_version)
+		{
+			Client.VersionRequestCommand vr_command = new Client.VersionRequestCommand(local_file, synced_file, file_version);
+			vr_command.success.connect(on_upload_ended);
+			client_connection.queue_command(vr_command);
+		}
+		
+		private void on_upload_ended(Client.SyncedFileVersion file_version,
+		                             int64 remote_id)
+		{
+			client_connection.queue_command(new Client.VersionCommitCommand(file_version, remote_id));
 		}
 
 		/* Everything that has to do with the server status */
@@ -168,6 +196,20 @@ namespace Barabas.DBus.Server
 				client_connection.queue_command(download_command);
 			});
 			return id;
+		}
+		
+		private void on_new_synced_file(Client.SyncedFile synced_file)
+		{
+			if (synced_file.has_remote())
+			{
+				return;
+			}
+			Client.LocalFile? local_file = Client.LocalFile.from_file_id(synced_file.ID, 
+			                                                             database);
+			if (local_file != null)
+			{
+				file_monitor_client.add_directory(local_file.parent_uri);
+			}
 		}
 	
 		/* public string get_file_path_for_remote(int remote_id)

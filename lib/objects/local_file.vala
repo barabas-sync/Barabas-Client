@@ -24,11 +24,12 @@ namespace Barabas.Client
 		private int64 ID;
 		public int64 syncedID;
 		public string uri { get; private set; }
-		private string parent_uri;
+		public string parent_uri { get; private set; }
 		public string display_name { get; private set; }
 		private string mimetype;
 		
 		private Database database;
+		public static LocalFileCache cache;
 		
 		private LocalFile(string uri)
 		{
@@ -44,6 +45,7 @@ namespace Barabas.Client
 			this.mimetype = file_info.get_content_type();
 			
 			this.database = null;
+			cache.add(this);
 		}
 		
 		public LocalFile.local_copy(string uri, SyncedFile synced_file, Database database)
@@ -62,6 +64,7 @@ namespace Barabas.Client
 			this.mimetype = synced_file.mimetype;
 			
 			insert();
+			cache.add(this);
 		}
 		
 		private LocalFile.from_statement(Sqlite.Statement stmt, Database database)
@@ -73,6 +76,8 @@ namespace Barabas.Client
 			this.uri = stmt.column_text(2);
 			this.parent_uri = stmt.column_text(3);
 			this.display_name = stmt.column_text(4);
+			
+			cache.add(this);
 		}
 		
 		public SyncedFile? sync(Database database)
@@ -106,6 +111,12 @@ namespace Barabas.Client
 			
 			if (select.step() == Sqlite.ROW)
 			{
+				string uri = select.column_text(2);
+				if (cache.has(uri))
+				{
+					return cache.get(uri);
+				}
+			
 				return new LocalFile.from_statement(select, database);
 			}
 			else
@@ -116,6 +127,11 @@ namespace Barabas.Client
 		
 		public static LocalFile? from_uri(string uri, Database database, bool create = true)
 		{
+			if (cache.has(uri))
+			{
+				return cache.get(uri);
+			}
+		
 			Sqlite.Statement select = database.prepare("SELECT * FROM LocalFile
 			    WHERE uri = @uri;");
 			select.bind_text(select.bind_parameter_index("@uri"), uri);
@@ -124,15 +140,18 @@ namespace Barabas.Client
 			LocalFile local_file = null;
 			if (rc == Sqlite.ROW)
 			{
+				GLib.log("database", LogLevelFlags.LEVEL_INFO, "Found %s", uri);
 				local_file = new LocalFile.from_statement(select, database);
 			}
 			else if (create)
 			{
+				GLib.log("database", LogLevelFlags.LEVEL_INFO, "Creating %s", uri);
 				local_file = new LocalFile(uri);
 			}
 			else
 			{
-			}	return null;
+				return null;
+			}
 			
 			return local_file;
 		}
@@ -140,7 +159,9 @@ namespace Barabas.Client
 		public void rename(string display_name, string uri)
 		{
 			this.display_name = display_name;
+			cache.unset(this.uri);
 			this.uri = uri;
+			cache.add(this);
 			
 			if (database != null)
 			{
@@ -167,6 +188,8 @@ namespace Barabas.Client
 		}
 		
 		public signal void synced(SyncedFile synced_file);
+		public signal void initiate_upload(SyncedFile synced_file,
+		                                   SyncedFileVersion synced_file_version);
 		
 		private void insert()
 		{

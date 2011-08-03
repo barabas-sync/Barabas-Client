@@ -27,6 +27,9 @@ namespace Barabas.DBus.Server
 		public SyncedFileVersion(Client.SyncedFileVersion sf_version)
 		{
 			this.client_synced_file_version = sf_version;
+			sf_version.upload_started.connect(() => { upload_started(); });
+			sf_version.upload_progressed.connect((a, b) => { upload_progressed(a, b); });
+			sf_version.upload_stopped.connect(() => { upload_stopped(); });
 		}
 		
 		public int64 get_id()
@@ -43,6 +46,10 @@ namespace Barabas.DBus.Server
 		{
 			connection.register_object(path, this);
 		}
+		
+		public signal void upload_started();
+		public signal void upload_progressed(int64 progress, int64 total);
+		public signal void upload_stopped();
 	}
 }
 	

@@ -52,7 +52,6 @@ namespace Barabas.Client
 
 		public Connection(Database database)
 		{
-			SyncedFile.cache = new SyncedFileCache();
 			SyncedFile.cache.added.connect(on_added_synced_file);
 			this.database = database;
 			this.status_changed.connect((status, msg) => {

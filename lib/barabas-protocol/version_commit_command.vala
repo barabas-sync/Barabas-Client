@@ -19,38 +19,39 @@
 
 namespace Barabas.Client
 {
-	public abstract class Cache<KEY, VALUE>
+	public class VersionCommitCommand : ICommand
 	{
-		private Gee.Map<KEY, VALUE> mapping;
-		
-		public Cache()
+
+		private SyncedFileVersion version_to_sync;
+		private int64 commit_id;
+	
+		public override string command_type { get { return "commitVersion"; } }
+
+		public VersionCommitCommand (SyncedFileVersion file_version, 
+		                             int64 commit_id)
 		{
-			mapping = new Gee.HashMap<KEY, VALUE>();
+			this.version_to_sync = file_version;
+			this.commit_id = commit_id;
 		}
-		
-		public bool has(KEY key)
+
+		public override Json.Generator? execute ()
 		{
-			return key in mapping.keys;
-		}
+			Json.Generator gen;
+			var commit_version = json_message(out gen);
 		
-		public VALUE? get(KEY key)
+			commit_version.set_string_member("request", command_type);
+			commit_version.set_int_member("commit-id", commit_id);
+		
+			return gen;
+		}
+	
+		public override void response (Json.Object response)
 		{
-			return mapping[key];
+			// TODO: add failure detection
+			// Normally all is wel...
+		
+			version_to_sync.set_remote(response.get_int_member("version-id"));
+			version_to_sync.upload_stopped();
 		}
-		
-		public void add(VALUE val)
-		{
-			mapping.set(key(val), val);
-			a_added(val);
-		}
-		
-		public void unset(KEY key)
-		{
-			mapping.unset(key);
-		}
-		
-		protected abstract void a_added(VALUE val);
-		
-		protected abstract KEY key(VALUE val);
 	}
 }

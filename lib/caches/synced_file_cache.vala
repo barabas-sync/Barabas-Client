@@ -25,5 +25,12 @@ namespace Barabas.Client
 		{
 			return file.ID;
 		}
+		
+		protected override void a_added(SyncedFile file)
+		{
+			added(file);
+		}
+		
+		public signal void added(SyncedFile file);
 	}
 }

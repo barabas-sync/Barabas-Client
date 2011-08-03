@@ -57,6 +57,19 @@ namespace Barabas.Client
 		{
 			return remoteID != 0;
 		}
+		
+		internal void set_remote(int64 remote_id)
+		{
+			this.remoteID = remote_id;
+			
+			Sqlite.Statement update_stmt = database.prepare("
+			    UPDATE SyncedFileVersion
+			           SET remoteID=@remoteID
+			           WHERE ID=@ID");
+			update_stmt.bind_int64(update_stmt.bind_parameter_index("@ID"), ID);
+			update_stmt.bind_int64(update_stmt.bind_parameter_index("@remoteID"), remote_id);
+			update_stmt.step();
+		}
 	
 		private SyncedFileVersion.from_statement(Sqlite.Statement stmt, Database database)
 		{
@@ -119,5 +132,9 @@ namespace Barabas.Client
 			}
 			this.ID = database.last_insert_row_id();
 		}
+		
+		public signal void upload_started();
+		public signal void upload_progressed(int64 progress, int64 total);
+		public signal void upload_stopped();
 	}
 }

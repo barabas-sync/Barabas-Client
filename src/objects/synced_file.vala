@@ -27,6 +27,11 @@ namespace Barabas.DBus.Server
 		public SyncedFile(Barabas.Client.SyncedFile client_synced_file)
 		{
 			this.client_synced_file = client_synced_file;
+			this.client_synced_file.tagged.connect((tag, local) => { tagged(tag); });
+			this.client_synced_file.new_version.connect((new_version, local) => {
+				publish_version(new_version);
+				version_added(new_version.ID);
+			});
 		}
 		
 		public string get_name()
@@ -90,8 +95,7 @@ namespace Barabas.DBus.Server
 		
 			foreach (Client.SyncedFileVersion sf_version in client_synced_file.versions())
 			{
-				SyncedFileVersion version = new SyncedFileVersion(sf_version);
-				version.publish(path + "/versions/" + sf_version.ID.to_string(), connection);
+				publish_version(sf_version);
 			}
 		}
 		
@@ -104,6 +108,18 @@ namespace Barabas.DBus.Server
 		protected override void do_register(string path, DBusConnection connection)
 		{
 			connection.register_object(path, this);
+		}
+		
+		public signal void tagged(string tag);
+		public signal void version_added(int64 synced_file_id);
+		
+		private void publish_version(Client.SyncedFileVersion sf_version)
+		{
+			if (dbus_connection != null)
+			{
+				SyncedFileVersion version = new SyncedFileVersion(sf_version);
+				version.publish(dbus_path + "/versions/" + sf_version.ID.to_string(), dbus_connection);
+			}
 		}
 	}
 }

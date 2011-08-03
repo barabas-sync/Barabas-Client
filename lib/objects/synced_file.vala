@@ -34,7 +34,7 @@ namespace Barabas.Client
 		private Gee.Map<string, SyncedFileTag> tag_list;
 		private Gee.List<SyncedFileVersion> version_list;
 		private Database database;
-		internal static SyncedFileCache cache;
+		public static SyncedFileCache cache;
 
 		internal SyncedFile(Database database,
 		                    int64 remoteID,

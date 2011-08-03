@@ -19,38 +19,18 @@
 
 namespace Barabas.Client
 {
-	public abstract class Cache<KEY, VALUE>
+	public class LocalFileCache : Cache<string, LocalFile>
 	{
-		private Gee.Map<KEY, VALUE> mapping;
-		
-		public Cache()
+		protected override string key(LocalFile file)
 		{
-			mapping = new Gee.HashMap<KEY, VALUE>();
+			return file.uri;
 		}
 		
-		public bool has(KEY key)
+		protected override void a_added(LocalFile file)
 		{
-			return key in mapping.keys;
+			added(file);
 		}
 		
-		public VALUE? get(KEY key)
-		{
-			return mapping[key];
-		}
-		
-		public void add(VALUE val)
-		{
-			mapping.set(key(val), val);
-			a_added(val);
-		}
-		
-		public void unset(KEY key)
-		{
-			mapping.unset(key);
-		}
-		
-		protected abstract void a_added(VALUE val);
-		
-		protected abstract KEY key(VALUE val);
+		public signal void added(LocalFile file);
 	}
 }

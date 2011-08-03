@@ -51,9 +51,9 @@ namespace Barabas.DBus.Server
 			if (dbus_ref_count == 0)
 			{
 				unpublish();
-				on_freed_all();
+				//on_freed_all();
 			}
 		}
-		internal signal void on_freed_all();
+		//internal signal void on_freed_all();
 	}
 }
