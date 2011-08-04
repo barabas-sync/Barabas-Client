@@ -26,6 +26,7 @@ vala_precompile(BARABAS_CLIENT_C
                          lib/caches/cache.vala
                          lib/caches/local_file_cache.vala
                          lib/caches/synced_file_cache.vala
+                         lib/objects/history_log_entry.vala
                          lib/objects/local_file.vala
                          lib/objects/synced_file.vala
                          lib/objects/synced_file_tag.vala

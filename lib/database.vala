@@ -26,7 +26,7 @@ namespace Barabas.Client
 		public Database() throws DatabaseError
 		{
 			string path = Path.build_filename(Environment.get_user_data_dir(), "barabas");
-			string db_file = Path.build_filename(path, "barabas-0.1.13.sqlite");
+			string db_file = Path.build_filename(path, "barabas-0.1.14.sqlite");
 			if (!FileUtils.test(path, GLib.FileTest.IS_DIR))
 			{
 				DirUtils.create_with_parents(path, 0770);
@@ -86,9 +86,9 @@ namespace Barabas.Client
 			stmt3.step();
 		
 			var stmt4 = prepare ("CREATE TABLE HistoryLog (
-					remoteLogID INTEGER PRIMARY KEY,
-					fileRemoteID INTEGER NOT NULL,
-					versionID INTEGER,
+					remoteLogID INTEGER(8) PRIMARY KEY,
+					fileRemoteID INTEGER(8) NOT NULL,
+					versionID INTEGER(8),
 					tagName VARCHAR(128),
 					isNew BOOLEAN,
 					ts TIMESTAMP NOT NULL,

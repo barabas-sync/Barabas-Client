@@ -111,6 +111,22 @@ namespace Barabas.Client
 			}
 		}
 		
+		public static SyncedFileVersion? find_from_remote_id(int64 remote_id, Database database)
+		{
+			Sqlite.Statement select = database.prepare("SELECT * FROM SyncedFileVersion
+			                                            WHERE remoteID=@remoteID");
+			select.bind_int64(select.bind_parameter_index("@remoteID"), remote_id);
+			
+			if (select.step() == Sqlite.ROW)
+			{
+				return new SyncedFileVersion.from_statement(select, database);
+			}
+			else
+			{
+				return null;
+			}
+		}
+		
 		private void insert()
 		{
 			Sqlite.Statement stmt = database.prepare("INSERT INTO SyncedFileVersion

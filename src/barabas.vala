@@ -107,6 +107,15 @@ namespace Barabas.DBus.Server
 		private void on_added_local_file(Client.LocalFile local_file)
 		{
 			local_file.initiate_upload.connect(on_initiate_upload);
+			local_file.synced.connect(on_new_local_file);
+		}
+		
+		private void on_new_local_file(Client.LocalFile local_file,
+		                               Client.SyncedFile synced_file)
+		{
+			Client.SyncedFileVersion file_version = new Client.SyncedFileVersion(synced_file.ID, 0, database);
+			synced_file.add_version(file_version);
+			local_file.initiate_upload(synced_file, file_version);
 		}
 		
 		private void on_initiate_upload(Client.LocalFile local_file,

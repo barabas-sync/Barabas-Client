@@ -36,6 +36,7 @@ namespace Barabas.Client
 		private GLib.SocketClient socket;
 		private GLib.SocketConnection connection;
 		private GLib.IOChannel socketChannel;
+		private ConnectionStatus connection_status;
 		
 		private Gee.List<string> enabled_authentication_methods;
 		private string[] current_authentication_methods;
@@ -55,9 +56,13 @@ namespace Barabas.Client
 			SyncedFile.cache.added.connect(on_added_synced_file);
 			this.database = database;
 			this.status_changed.connect((status, msg) => {
+				this.connection_status = status;
 				if (status == ConnectionStatus.CONNECTED)
 				{
-					queue_command(new DownloadLogCommand(database, 0));
+					stdout.printf("STATUS CHANGED");
+					DownloadLogCommand command = new DownloadLogCommand(database);
+					command.success.connect(on_finished_download_first_log);
+					queue_command(command);
 				}
 			});
 			enabled_authentication_methods = new Gee.LinkedList<string>();
@@ -193,6 +198,23 @@ namespace Barabas.Client
 				RemoveTagCommand command = new RemoveTagCommand(synced_file, tag);
 				queue_command(command);
 			}
+		}
+		
+		private void on_finished_download_first_log()
+		{
+			GLib.Timeout.add_seconds(10, download_log);
+		}
+		
+		private bool download_log()
+		{
+			if (connection_status != ConnectionStatus.CONNECTED)
+			{
+				return false;
+			}
+		
+			DownloadLogCommand command = new DownloadLogCommand(database);
+			queue_command(command);
+			return true;
 		}
 
 		/* Network stuff */
