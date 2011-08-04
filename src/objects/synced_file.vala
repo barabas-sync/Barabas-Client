@@ -29,8 +29,15 @@ namespace Barabas.DBus.Server
 			this.client_synced_file = client_synced_file;
 			this.client_synced_file.tagged.connect((tag, local) => { tagged(tag); });
 			this.client_synced_file.new_version.connect((new_version, local) => {
-				publish_version(new_version);
-				version_added(new_version.ID);
+				try
+				{
+					publish_version(new_version);
+					version_added(new_version.ID);
+				}
+				catch (GLib.IOError error)
+				{
+					// FIXME: is their something sensible we can do?
+				}
 			});
 		}
 		
@@ -89,7 +96,8 @@ namespace Barabas.DBus.Server
 			return client_synced_file.versions().last().ID;
 		}
 		
-		internal override void publish(string path, DBusConnection connection)
+		internal override void publish(string path,
+		                               DBusConnection connection) throws GLib.IOError
 		{
 			base.publish(path, connection);
 		
@@ -105,7 +113,8 @@ namespace Barabas.DBus.Server
 			// Todo: unpublish all versions
 		}
 		
-		protected override void do_register(string path, DBusConnection connection)
+		protected override void do_register(string path,
+		                                    DBusConnection connection) throws GLib.IOError
 		{
 			connection.register_object(path, this);
 		}
@@ -113,7 +122,7 @@ namespace Barabas.DBus.Server
 		public signal void tagged(string tag);
 		public signal void version_added(int64 synced_file_id);
 		
-		private void publish_version(Client.SyncedFileVersion sf_version)
+		private void publish_version(Client.SyncedFileVersion sf_version) throws GLib.IOError
 		{
 			if (dbus_connection != null)
 			{

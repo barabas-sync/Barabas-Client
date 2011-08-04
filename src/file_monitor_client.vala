@@ -34,17 +34,24 @@ namespace Barabas.DBus.Server
 			{
 				string uri = select_paths.column_text(0);
 				GLib.File directory = GLib.File.new_for_uri(uri);
-				GLib.FileMonitor monitor = directory.monitor(GLib.FileMonitorFlags.SEND_MOVED);
-			
-				if (monitor == null)
+				try
+				{
+					GLib.FileMonitor monitor = directory.monitor(GLib.FileMonitorFlags.SEND_MOVED);
+						
+					if (monitor == null)
+					{
+						stdout.printf ("Creating monitor for %s failed\n", uri);
+					}
+					else
+					{
+						stdout.printf ("Monitoring %s\n", uri);
+						file_monitors[uri] = monitor;
+						monitor.changed.connect(file_event);
+					}
+				}
+				catch (GLib.Error error)
 				{
 					stdout.printf ("Creating monitor for %s failed\n", uri);
-				}
-				else
-				{
-					stdout.printf ("Monitoring %s\n", uri);
-					file_monitors[uri] = monitor;
-					monitor.changed.connect(file_event);
 				}
 			}
 		}
@@ -55,9 +62,16 @@ namespace Barabas.DBus.Server
 			{
 				GLib.File directory = GLib.File.new_for_uri(uri);
 				stdout.printf ("Monitoring %s\n", uri);
-				GLib.FileMonitor monitor = directory.monitor(GLib.FileMonitorFlags.SEND_MOVED);
-				file_monitors[uri] = monitor;
-				monitor.changed.connect(file_event);
+				try
+				{
+					GLib.FileMonitor monitor = directory.monitor(GLib.FileMonitorFlags.SEND_MOVED);
+					file_monitors[uri] = monitor;
+					monitor.changed.connect(file_event);
+				}
+				catch (GLib.Error error)
+				{
+					// FIXME: do something sensible here
+				}
 			}
 			else
 			{
@@ -95,7 +109,15 @@ namespace Barabas.DBus.Server
 		private void file_edited(GLib.File file)
 		{
 			// If file is synchronized, queue for sync
-			Client.LocalFile? local_file = Client.LocalFile.from_uri(file.get_uri(), database, false);
+			Client.LocalFile? local_file = null;
+			try
+			{
+				local_file = Client.LocalFile.from_uri(file.get_uri(), database, false);
+			}
+			catch (GLib.Error error)
+			{
+				
+			}
 			if (local_file != null && local_file.is_synced())
 			{
 				Client.SyncedFile? synced_file = Client.SyncedFile.from_ID(database, local_file.syncedID);
@@ -125,26 +147,45 @@ namespace Barabas.DBus.Server
 		private void file_renamed(GLib.File old_file, GLib.File new_file)
 		{
 			// Change the name in the database
-			Client.LocalFile? local_file = Client.LocalFile.from_uri(old_file.get_uri(),
-			                                                        database,
-			                                                        false);
-			if (local_file != null)
+			Client.LocalFile? local_file;
+			try
 			{
-				GLib.FileInfo file_info =
-				    new_file.query_info(GLib.FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME, 
-				                        FileQueryInfoFlags.NONE,
-				                        null);
-				local_file.rename(file_info.get_display_name(),
-				                  new_file.get_uri());
+				local_file = Client.LocalFile.from_uri(old_file.get_uri(),
+			                                           database,
+			                                           false);
+
+				if (local_file != null)
+				{
+					GLib.FileInfo file_info =
+						new_file.query_info(GLib.FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME, 
+						                    FileQueryInfoFlags.NONE,
+						                    null);
+					local_file.rename(file_info.get_display_name(),
+						              new_file.get_uri());
+				}
+			}
+			catch (GLib.Error error)
+			{
+				// FIXME: do something sensible here
+				return;
 			}
 		}
 	
 		private void file_deleted(GLib.File file)
 		{
 			// Delete the file from our database
-			Client.LocalFile? local_file = Client.LocalFile.from_uri(file.get_uri(),
-			                                                        database,
-			                                                        false);
+			Client.LocalFile? local_file;
+			try
+			{
+				local_file = Client.LocalFile.from_uri(file.get_uri(),
+			                                           database,
+			                                           false);
+			}
+			catch (GLib.Error error)
+			{
+				// FIXME: do something sensible here
+				return;
+			}
 			if (local_file != null)
 			{
 				local_file.remove();

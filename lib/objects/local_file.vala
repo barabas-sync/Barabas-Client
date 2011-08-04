@@ -31,7 +31,7 @@ namespace Barabas.Client
 		private Database database;
 		public static LocalFileCache cache;
 		
-		private LocalFile(string uri)
+		private LocalFile(string uri) throws GLib.Error
 		{
 			GLib.File file = GLib.File.new_for_uri(uri);
 			this.uri = uri;
@@ -48,7 +48,9 @@ namespace Barabas.Client
 			cache.add(this);
 		}
 		
-		public LocalFile.local_copy(string uri, SyncedFile synced_file, Database database)
+		public LocalFile.local_copy(string uri,
+		                            SyncedFile synced_file,
+		                            Database database) throws GLib.Error
 		{
 			this.database = database;
 			this.syncedID = synced_file.ID;
@@ -125,7 +127,9 @@ namespace Barabas.Client
 			}
 		}
 		
-		public static LocalFile? from_uri(string uri, Database database, bool create = true)
+		public static LocalFile? from_uri(string uri,
+		                                  Database database,
+		                                  bool create = true) throws GLib.Error
 		{
 			if (cache.has(uri))
 			{

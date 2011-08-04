@@ -76,7 +76,16 @@ namespace Barabas.Client
 			//this.client.add_incoming_request_handler("commitDownload", this.on_commit_download);
 
 			var socket = new GLib.SocketClient();
-			var connection = socket.connect_to_host(host, (uint16)port);
+			SocketConnection connection;
+			try
+			{
+				connection = socket.connect_to_host(host, (uint16)port);
+			}
+			catch (GLib.Error connect_error)
+			{
+				// TODO: retry for a while
+				return;
+			}
 			download_started();
 		
 			GLib.File file = GLib.File.new_for_uri (download_uri);
@@ -84,30 +93,46 @@ namespace Barabas.Client
 			{
 				yield file.create_async(GLib.FileCreateFlags.NONE, 0, null);
 			}
-			catch (GLib.IOError error)
+			catch (GLib.IOError io_create_error)
 			{
 				// Catch the case the file already exists.
 			}
-			GLib.FileIOStream stream = yield file.open_readwrite_async();
-		
-			int64 total_to_read = 0;
-			int64 total_read = 0;
-			ssize_t current_read = 1;
-			uint8[] buffer = new uint8[1024];
-			while (current_read > 0)
+			catch (GLib.Error create_error)
 			{
-				current_read = yield connection.input_stream.read_async(buffer);
-				total_read += current_read;
-				buffer.resize((int)current_read);
-				if (current_read > 0)
-				{
-					yield stream.output_stream.write_async(buffer);
-					download_progress((int64)total_read, total_to_read);
-				}
+				// Catch the case the file already exists.
 			}
-			stream.close();
-			connection.close();
-			download_stopped();
+			
+			try
+			{
+				GLib.FileIOStream stream = yield file.open_readwrite_async();
+			
+				int64 total_to_read = 0;
+				int64 total_read = 0;
+				ssize_t current_read = 1;
+				uint8[] buffer = new uint8[1024];
+				while (current_read > 0)
+				{
+					current_read = yield connection.input_stream.read_async(buffer);
+					total_read += current_read;
+					buffer.resize((int)current_read);
+					if (current_read > 0)
+					{
+						yield stream.output_stream.write_async(buffer);
+						download_progress((int64)total_read, total_to_read);
+					}
+				}
+				stream.close();
+				connection.close();
+				download_stopped();
+			}
+			catch (GLib.IOError io_error)
+			{
+				// TODO: error handling
+			}
+			catch (GLib.Error error)
+			{
+				// TODO: error handling
+			}
 		}
 		
 		public signal void download_started();

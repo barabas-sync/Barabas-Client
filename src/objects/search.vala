@@ -39,7 +39,8 @@ namespace Barabas.DBus.Server
 			return results.to_array();
 		}
 		
-		internal override void publish(string path, DBusConnection connection)
+		internal override void publish(string path,
+		                               DBusConnection connection) throws GLib.IOError
 		{
 			base.publish(path, connection);
 		
@@ -74,7 +75,8 @@ namespace Barabas.DBus.Server
 			}
 		}
 		
-		protected override void do_register(string path, DBusConnection connection)
+		protected override void do_register(string path,
+		                                    DBusConnection connection) throws GLib.IOError
 		{
 			connection.register_object(path, this);
 		}

@@ -31,7 +31,7 @@ namespace Barabas.DBus.Server
 		                 Barabas.Client.Database database)
 		{
 			this.client_local_file = client_local_file;
-			this.client_local_file.synced.connect((file) => { synced(); });
+			this.client_local_file.synced.connect(on_synced);
 			this.database = database;
 			
 			this.synced_file = null;
@@ -59,7 +59,7 @@ namespace Barabas.DBus.Server
 		
 		public signal void synced();
 
-		internal override void publish(string path, DBusConnection connection)
+		internal override void publish(string path, DBusConnection connection) throws GLib.IOError
 		{
 			base.publish(path, connection);
 		
@@ -72,8 +72,6 @@ namespace Barabas.DBus.Server
 				synced_file = new SyncedFile(client_synced_file);
 				synced_file.publish(dbus_path + "/synced_file", connection);
 			}
-			
-			client_local_file.synced.connect(on_synced);
 		}
 		
 		internal override void unpublish()
@@ -87,11 +85,20 @@ namespace Barabas.DBus.Server
 		
 		private void on_synced(Client.SyncedFile client_synced_file)
 		{
-			synced_file = new SyncedFile(client_synced_file);
-			synced_file.publish(dbus_path + "/synced_file", dbus_connection);
+			try
+			{
+				synced_file = new SyncedFile(client_synced_file);
+				synced_file.publish(dbus_path + "/synced_file", dbus_connection);
+				synced();
+			}
+			catch (GLib.IOError error)
+			{
+				// FIXME: is their something sensible we can do?
+			}
 		}
 		
-		protected override void do_register(string path, DBusConnection connection)
+		protected override void do_register(string path,
+		                                    DBusConnection connection) throws GLib.IOError
 		{
 			connection.register_object(path, this);
 		}

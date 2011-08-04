@@ -26,9 +26,10 @@ namespace Barabas.DBus.Server
 		protected DBusConnection dbus_connection;
 		protected string dbus_path;
 	
-		protected abstract void do_register(string path, DBusConnection connection);
+		protected abstract void do_register(string path,
+		                                    DBusConnection connection) throws GLib.IOError;
 	
-		internal virtual void publish(string path, DBusConnection connection)
+		internal virtual void publish(string path, DBusConnection connection) throws GLib.IOError
 		{
 			this.dbus_connection = connection;
 			this.dbus_path = path;

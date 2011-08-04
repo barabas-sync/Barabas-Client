@@ -111,7 +111,7 @@ namespace Barabas.Client
 		public Sqlite.Statement prepare(string sql)
 		{
 			Sqlite.Statement stmt;
-			int rc = database.prepare(sql, -1, out stmt);
+			database.prepare(sql, -1, out stmt);
 			return stmt;
 		}
 	

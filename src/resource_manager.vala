@@ -41,7 +41,15 @@ namespace Barabas.DBus.Server
 			mapped_resources.set(id, resource);
 			string the_path = path + "/" + id.to_string();
 			stdout.printf("Publishing %s\n", the_path);
-			a_resource.publish(the_path, dbus_connection);
+			
+			try
+			{
+				a_resource.publish(the_path, dbus_connection);
+			}
+			catch (GLib.IOError error)
+			{
+				// FIXME: do something sensible
+			}
 			
 			//((AResource)resource).on_freed_all.connect(free_resource, resource);
 			

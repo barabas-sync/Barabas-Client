@@ -75,39 +75,54 @@ namespace Barabas.Client
 				{
 					connection = socket.connect_to_host(host, (uint16)port);
 				}
-				catch (GLib.IOError error)
+				catch (GLib.IOError iO_connect_error)
 				{
 					connect_tries++;
 					GLib.Timeout.add(200, upload.callback);
 					yield;
 				}
+				catch (GLib.Error connect_error)
+				{
+					// TODO: catch error
+				}
 			}
 		
-			version_to_sync.upload_started();
-		
-			GLib.File file = GLib.File.new_for_uri(local_file_to_upload.uri);
-			GLib.FileInfo info = yield file.query_info_async(GLib.FILE_ATTRIBUTE_STANDARD_SIZE, GLib.FileQueryInfoFlags.NONE);
-			GLib.FileIOStream stream = yield file.open_readwrite_async();
-		
-			ssize_t total_read = 0;
-			int64 total_to_read = info.get_size();
-			uint8[] buffer = new uint8[2048];
-			GLib.log("network", LogLevelFlags.LEVEL_INFO, "Uploading");
-			while (total_to_read > total_read)
+			try
 			{
-				ssize_t current_stride = yield stream.input_stream.read_async(buffer);
-				buffer.resize((int)current_stride);
-				total_read += current_stride;
-				yield connection.output_stream.write_async(buffer);
-				version_to_sync.upload_progressed((int64)total_read, total_to_read);
-				
-				GLib.Timeout.add(50, upload.callback);
-				yield;
-			}
+				version_to_sync.upload_started();
 		
-			connection.close();
+				GLib.File file = GLib.File.new_for_uri(local_file_to_upload.uri);
+				GLib.FileInfo info = yield file.query_info_async(GLib.FILE_ATTRIBUTE_STANDARD_SIZE, GLib.FileQueryInfoFlags.NONE);
+				GLib.FileIOStream stream = yield file.open_readwrite_async();
+		
+				ssize_t total_read = 0;
+				int64 total_to_read = info.get_size();
+				uint8[] buffer = new uint8[2048];
+				GLib.log("network", LogLevelFlags.LEVEL_INFO, "Uploading");
+				while (total_to_read > total_read)
+				{
+					ssize_t current_stride = yield stream.input_stream.read_async(buffer);
+					buffer.resize((int)current_stride);
+					total_read += current_stride;
+					yield connection.output_stream.write_async(buffer);
+					version_to_sync.upload_progressed((int64)total_read, total_to_read);
+				
+					GLib.Timeout.add(50, upload.callback);
+					yield;
+				}
+		
+				connection.close();
 			
-			success(version_to_sync, commit_id);
+				success(version_to_sync, commit_id);
+			}
+			catch (GLib.IOError io_error)
+			{
+				// TODO: more errors
+			}
+			catch (GLib.Error error)
+			{
+				// TODO: errors
+			}
 		}
 	
 		public signal void success(SyncedFileVersion file_version, int64 commit_id);
