@@ -113,7 +113,12 @@ namespace Barabas.DBus.Server
 		private void on_new_local_file(Client.LocalFile local_file,
 		                               Client.SyncedFile synced_file)
 		{
-			Client.SyncedFileVersion file_version = new Client.SyncedFileVersion(synced_file.ID, 0, database);
+			DateTime date = new DateTime.now_local();
+			Client.SyncedFileVersion file_version =
+			    new Client.SyncedFileVersion(synced_file.ID,
+			                                 "Initial version from " + GLib.Environment.get_host_name(),
+			                                 date,
+			                                 database);
 			synced_file.add_version(file_version);
 			local_file.initiate_upload(synced_file, file_version);
 		}
@@ -122,7 +127,7 @@ namespace Barabas.DBus.Server
 		                                Client.SyncedFile synced_file,
 		                                Client.SyncedFileVersion file_version)
 		{
-			Client.VersionRequestCommand vr_command = new Client.VersionRequestCommand(local_file, synced_file, file_version);
+			Client.VersionRequestCommand vr_command = new Client.VersionRequestCommand(local_file, synced_file, file_version, client_connection.connected_host);
 			vr_command.success.connect(on_upload_ended);
 			client_connection.queue_command(vr_command);
 		}
@@ -196,7 +201,7 @@ namespace Barabas.DBus.Server
 		{
 			Client.SyncedFileVersion version = Client.SyncedFileVersion.from_id(version_id, database);
 			Client.RequestDownloadCommand download_command =
-			    new Client.RequestDownloadCommand(version, uri);
+			    new Client.RequestDownloadCommand(version, uri, client_connection.connected_host);
 			Download download = new Download(download_command);
 			int id = current_downloads.add(download);
 			

@@ -130,9 +130,11 @@ namespace Barabas.DBus.Server
 					{
 						return;
 					}
+					DateTime date = new DateTime.now_local();
 					Client.SyncedFileVersion new_version = new Client.SyncedFileVersion(
 					    synced_file.ID,
-					    0,
+					    "Version from " + date.to_string() +  " at " + GLib.Environment.get_host_name(),
+					    date,
 					    database);
 					synced_file.add_version(new_version);
 					local_file.initiate_upload(synced_file, new_version);

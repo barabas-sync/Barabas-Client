@@ -75,6 +75,8 @@ namespace Barabas.Client
 						
 						db_entry = new HistoryLogEntry.from_new_file(remote_id,
 						                                             file_id,
+						                                             name,
+						                                             mimetype,
 						                                             false,
 						                                             database);
 						GLib.log("test", LogLevelFlags.LEVEL_INFO, "Inserting (new-file): %lli", remote_id);
@@ -108,7 +110,7 @@ namespace Barabas.Client
 						
 						file.tag_from_remote(tag_a);
 					}
-					else if (type == "remove-tag")
+					else if (type == "untag")
 					{
 						if (file == null)
 						{
@@ -126,20 +128,26 @@ namespace Barabas.Client
 					}
 					else if (type == "new-version")
 					{
-						int64 remoteID = json_entry.get_int_member("version-id");
+						int64 version_id = json_entry.get_int_member("version-id");
+						string version_name = json_entry.get_string_member("version-name");
+						string time_edited_as_string = json_entry.get_string_member("version-timeedited");
+						DateTime time_edited = from_barabas_date(time_edited_as_string);
 					
-						SyncedFileVersion? sf_version = SyncedFileVersion.find_from_remote_id(remoteID, database);
+						SyncedFileVersion? sf_version =
+						    SyncedFileVersion.find_from_remote_id(version_id, database);
 						
 						db_entry = new HistoryLogEntry.from_new_version(remote_id,
 						                                                file_id,
-						                                                remoteID,
+						                                                version_id,
+						                                                version_name,
+						                                                time_edited_as_string,
 						                                                false,
 						                                                database);
 						
 						if (sf_version == null)
 						{
 							sf_version = new SyncedFileVersion.from_remote(
-						    	remoteID, file_id, 0, database);
+						    	version_id, file_id, version_name, time_edited, database);
 							file.remote_new_version(sf_version);
 						}
 					}

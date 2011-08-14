@@ -22,31 +22,42 @@ namespace Barabas.Client
 	public class SyncedFileVersion : Object
 	{
 		private static const int COLUMN_ID = 0;
-		private static const int COLUMN_REMOTE_ID = 1;
-		private static const int COLUMN_FILE_ID = 2;
-		private static const int COLUMN_DATETIME_EDITED = 3;
+		private static const int COLUMN_FILE_ID = 1;
+		private static const int COLUMN_REMOTE_ID = 2;
+		private static const int COLUMN_VERSION_NAME = 3;
+		private static const int COLUMN_DATETIME_EDITED = 4;
 	
 		public int64 ID { get; private set; }
 		public int64 remoteID { get; private set; }
 		public int64 fileID { get; private set; }
-		public int datetimeEdited { get; private set; }
+		public string name { get; set; }
+		public DateTime datetimeEdited { get; private set; }
 		
 		private Database database;
 	
-		public SyncedFileVersion(int64 fileID, int datetimeEdited, Database database)
+		public SyncedFileVersion(int64 fileID,
+		                         string name,
+		                         DateTime datetimeEdited,
+		                         Database database)
 		{
 			this.remoteID = 0;
 			this.fileID = fileID;
+			this.name = name;
 			this.datetimeEdited = datetimeEdited;
 			this.database = database;
 			
 			insert();
 		}
 	
-		public SyncedFileVersion.from_remote(int64 remoteID, int64 fileID, int datetimeEdited, Database database)
+		public SyncedFileVersion.from_remote(int64 remoteID,
+		                                     int64 fileID,
+		                                     string name,
+		                                     DateTime datetimeEdited,
+		                                     Database database)
 		{
 			this.remoteID = remoteID;
 			this.fileID = fileID;
+			this.name = name;
 			this.datetimeEdited = datetimeEdited;
 			this.database = database;
 			
@@ -71,12 +82,14 @@ namespace Barabas.Client
 			update_stmt.step();
 		}
 	
-		private SyncedFileVersion.from_statement(Sqlite.Statement stmt, Database database)
+		private SyncedFileVersion.from_statement(Sqlite.Statement stmt,
+		                                         Database database)
 		{
 			this.ID = stmt.column_int64(COLUMN_ID);
-			this.remoteID = stmt.column_int64(COLUMN_FILE_ID);
+			this.remoteID = stmt.column_int64(COLUMN_REMOTE_ID);
 			this.fileID = stmt.column_int64(COLUMN_FILE_ID);
-			this.datetimeEdited = stmt.column_int(COLUMN_DATETIME_EDITED);
+			this.name = stmt.column_text(COLUMN_VERSION_NAME);
+			this.datetimeEdited = create_date(stmt.column_text(COLUMN_DATETIME_EDITED));
 		}
 	
 		public static Gee.List<SyncedFileVersion> find_versions_for_file(SyncedFile file, Database database)
@@ -130,8 +143,8 @@ namespace Barabas.Client
 		private void insert()
 		{
 			Sqlite.Statement stmt = database.prepare("INSERT INTO SyncedFileVersion
-			    (fileID, remoteID, timeEdited) 
-			    VALUES(@fileID, @remoteID, @timeEdited);");
+			    (fileID, remoteID, name, timeEdited) 
+			    VALUES(@fileID, @remoteID, @name, @timeEdited);");
 			stmt.bind_int64(stmt.bind_parameter_index("@fileID"), fileID);
 			if (remoteID == 0)
 			{
@@ -141,12 +154,33 @@ namespace Barabas.Client
 			{
 				stmt.bind_int64(stmt.bind_parameter_index("@remoteID"), remoteID);
 			}
-			stmt.bind_int(stmt.bind_parameter_index("@timeEdited"), datetimeEdited);
+			stmt.bind_text(stmt.bind_parameter_index("@name"), name);
+			stmt.bind_text(stmt.bind_parameter_index("@timeEdited"), datetimeEdited.format("%Y-%m-%dT%H:%M:%S%z"));
 			int rc = stmt.step();
 			if (rc != Sqlite.DONE)
 			{
 			}
 			this.ID = database.last_insert_row_id();
+		}
+		
+		private DateTime create_date(string date)
+		{
+			string datetimepart = date.substring(0, 19);
+			int year = date.substring(0, 4).to_int();
+			int month = date.substring(5, 2).to_int();
+			int day = date.substring(8, 2).to_int();
+			int hours = date.substring(11, 2).to_int();
+			int minutes = date.substring(14, 2).to_int();
+			int seconds = date.substring(17, 2).to_int();
+			TimeZone timezone = new TimeZone(date.substring(19));
+	
+			return new DateTime(timezone,
+					            year,
+					            month,
+					            day,
+					            hours,
+					            minutes,
+					            seconds);
 		}
 		
 		public signal void upload_started();

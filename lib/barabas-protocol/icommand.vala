@@ -39,5 +39,30 @@ namespace Barabas.Client
 		{
 			SUCCESS = 200
 		}
+		
+		protected string to_barabas_date(DateTime datetime)
+		{
+			return datetime.format("%Y-%m-%dT%H:%M:%S%z");
+		}
+		
+		protected DateTime from_barabas_date(string date)
+		{
+			string datetimepart = date.substring(0, 19);
+			int year = date.substring(0, 4).to_int();
+			int month = date.substring(5, 2).to_int();
+			int day = date.substring(8, 2).to_int();
+			int hours = date.substring(11, 2).to_int();
+			int minutes = date.substring(14, 2).to_int();
+			int seconds = date.substring(17, 2).to_int();
+			TimeZone timezone = new TimeZone(date.substring(19));
+	
+			return new DateTime(timezone,
+					            year,
+					            month,
+					            day,
+					            hours,
+					            minutes,
+					            seconds);
+		}
 	}
 }

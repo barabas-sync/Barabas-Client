@@ -25,16 +25,19 @@ namespace Barabas.Client
 		private SyncedFileVersion version_to_sync;
 		private SyncedFile file_to_sync;
 		private LocalFile local_file_to_upload;
+		private string connection_host;
 	
 		public override string command_type { get { return "requestVersion"; } }
 
 		public VersionRequestCommand (LocalFile local_file,
 		                              SyncedFile file_to_sync,
-		                              SyncedFileVersion version_to_sync)
+		                              SyncedFileVersion version_to_sync,
+		                              string connection_host)
 		{
 			this.local_file_to_upload = local_file;
 			this.version_to_sync = version_to_sync;
 			this.file_to_sync = file_to_sync;
+			this.connection_host = connection_host;
 		}
 
 		public override Json.Generator? execute ()
@@ -44,6 +47,8 @@ namespace Barabas.Client
 		
 			version_request.set_string_member("request", command_type);
 			version_request.set_int_member("file-id", file_to_sync.remoteID);
+			version_request.set_string_member("version-name", version_to_sync.name);
+			version_request.set_string_member("datetime-edited", to_barabas_date(version_to_sync.datetimeEdited));
 		
 			// TODO: add different methods negotation (plain, rsync, ...)
 		
@@ -64,6 +69,10 @@ namespace Barabas.Client
 			Json.Object channel_info = response.get_object_member("channel-info");
 			int64 port = channel_info.get_int_member("port");
 			string host = channel_info.get_string_member("host");
+			if (host == null)
+			{
+				host = connection_host;
+			}
 	
 			var socket = new GLib.SocketClient();
 			

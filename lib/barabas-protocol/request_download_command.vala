@@ -25,13 +25,15 @@ namespace Barabas.Client
 		private SyncedFileVersion version;
 		//private int64 commit_id;
 		private string download_uri;
+		private string connection_host;
 	
 		public override string command_type { get { return "requestDownload"; } }
 
-		public RequestDownloadCommand (SyncedFileVersion version, string uri)
+		public RequestDownloadCommand (SyncedFileVersion version, string uri, string connection_host)
 		{
 			this.version = version;
 			this.download_uri = uri;
+			this.connection_host = connection_host;
 		}
 
 		public override Json.Generator? execute()
@@ -73,6 +75,10 @@ namespace Barabas.Client
 			Json.Object channel_info = response.get_object_member("channel-info");
 			int64 port = channel_info.get_int_member("port");
 			string host = channel_info.get_string_member("host");
+			if (host == null)
+			{
+				host = connection_host;
+			}
 			//this.client.add_incoming_request_handler("commitDownload", this.on_commit_download);
 
 			var socket = new GLib.SocketClient();

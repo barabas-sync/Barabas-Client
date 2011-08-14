@@ -26,7 +26,7 @@ namespace Barabas.Client
 		public Database() throws DatabaseError
 		{
 			string path = Path.build_filename(Environment.get_user_data_dir(), "barabas");
-			string db_file = Path.build_filename(path, "barabas-0.1.14.sqlite");
+			string db_file = Path.build_filename(path, "barabas-0.1.15.sqlite");
 			if (!FileUtils.test(path, GLib.FileTest.IS_DIR))
 			{
 				DirUtils.create_with_parents(path, 0770);
@@ -79,7 +79,8 @@ namespace Barabas.Client
 					ID INTEGER PRIMARY KEY AUTOINCREMENT,
 					fileID INTEGER(8),
 					remoteID INTEGER(8),
-					timeEdited TIMESTAMP,
+					name VARCHAR(256),
+					timeEdited VARCHAR(32),
 					FOREIGN KEY(fileID) REFERENCES SyncedFile(ID)
 					        ON DELETE CASCADE
 				);");
@@ -88,11 +89,20 @@ namespace Barabas.Client
 			var stmt4 = prepare ("CREATE TABLE HistoryLog (
 					remoteLogID INTEGER(8) PRIMARY KEY,
 					fileRemoteID INTEGER(8) NOT NULL,
-					versionID INTEGER(8),
+					isNew BOOLEAN NOT NULL,
+					isLocal BOOLEAN NOT NULL,
+					
+					-- New file parameters
+					fileName VARCHAR(256),
+					mimetype VARCHAR(64),
+					
+					-- Tag/Untag parameters
 					tagName VARCHAR(128),
-					isNew BOOLEAN,
-					ts TIMESTAMP NOT NULL,
-					local BOOLEAN NOT NULL
+					
+					-- New version parameters / Version rename
+					versionRemoteID INTEGER(8),
+					versionName VARCHAR(256),
+					timeEdited VARCHAR(32)
 				);");
 			stmt4.step();
 			

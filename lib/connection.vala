@@ -48,6 +48,8 @@ namespace Barabas.Client
 		
 		private GLib.Cancellable connect_cancellable;
 		
+		public string connected_host { get; private set; }
+		
 		public delegate void SearchCompletes(string search, int[] result);
 		public delegate void FileInfoRequest(FileInfo info);
 
@@ -84,6 +86,7 @@ namespace Barabas.Client
 				socket = new GLib.SocketClient();
 				connect_cancellable = new GLib.Cancellable();
 				connection = yield socket.connect_to_host_async(hostname, port, connect_cancellable);
+				connected_host = hostname;
 				socketChannel = new GLib.IOChannel.unix_new(connection.socket.fd);
 				socketChannel.add_watch(GLib.IOCondition.IN, data_received);
 				

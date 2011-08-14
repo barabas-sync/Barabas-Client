@@ -31,16 +31,16 @@ namespace Barabas.DBus.Server
 			sf_version.upload_progressed.connect((a, b) => { upload_progressed(a, b); });
 			sf_version.upload_stopped.connect(() => { upload_stopped(); });
 		}
-		
-		public int64 get_id()
+
+		public string get_name()
 		{
-			return client_synced_file_version.ID;
+			return client_synced_file_version.name;
 		}
 		
-		public int get_datetimeedited()
+		/*public DateTime get_datetimeedited()
 		{
 			return client_synced_file_version.datetimeEdited;
-		}
+		}*/
 
 		protected override void do_register(string path,
 		                                    DBusConnection connection) throws GLib.IOError
