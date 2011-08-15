@@ -33,6 +33,9 @@ namespace Barabas.Client
 		public string name { get; set; }
 		public DateTime datetimeEdited { get; private set; }
 		
+		private bool uploading_or_uploaded;
+		private bool deprecated;
+		
 		private Database database;
 	
 		public SyncedFileVersion(int64 fileID,
@@ -45,8 +48,13 @@ namespace Barabas.Client
 			this.name = name;
 			this.datetimeEdited = datetimeEdited;
 			this.database = database;
+			this.deprecated = false;
+			this.uploading_or_uploaded = false;
 			
 			insert();
+			upload_started.connect(() => {
+				uploading_or_uploaded = true;
+			});
 		}
 	
 		public SyncedFileVersion.from_remote(int64 remoteID,
@@ -60,13 +68,50 @@ namespace Barabas.Client
 			this.name = name;
 			this.datetimeEdited = datetimeEdited;
 			this.database = database;
+			this.deprecated = false;
+			this.uploading_or_uploaded = true;
 			
 			insert();
+		}
+		
+		private SyncedFileVersion.from_statement(Sqlite.Statement stmt,
+		                                         Database database)
+		{
+			this.ID = stmt.column_int64(COLUMN_ID);
+			this.remoteID = stmt.column_int64(COLUMN_REMOTE_ID);
+			this.fileID = stmt.column_int64(COLUMN_FILE_ID);
+			this.name = stmt.column_text(COLUMN_VERSION_NAME);
+			this.datetimeEdited = create_date(stmt.column_text(COLUMN_DATETIME_EDITED));
+			this.deprecated = false;
+			
+			this.uploading_or_uploaded = (remoteID != 0);
+			if (remoteID != 0)
+			{
+				upload_started.connect(() => {
+					uploading_or_uploaded = true;
+				});
+			}
 		}
 		
 		public bool is_remote()
 		{
 			return remoteID != 0;
+		}
+		
+		public bool is_uploading_or_uploaded()
+		{
+			return remoteID != 0 || uploading_or_uploaded;
+		}
+		
+		public void deprecate()
+		{
+			deprecated = true;
+			remove();			
+		}
+		
+		public bool is_deprecated()
+		{
+			return deprecated;
 		}
 		
 		internal void set_remote(int64 remote_id)
@@ -80,16 +125,6 @@ namespace Barabas.Client
 			update_stmt.bind_int64(update_stmt.bind_parameter_index("@ID"), ID);
 			update_stmt.bind_int64(update_stmt.bind_parameter_index("@remoteID"), remote_id);
 			update_stmt.step();
-		}
-	
-		private SyncedFileVersion.from_statement(Sqlite.Statement stmt,
-		                                         Database database)
-		{
-			this.ID = stmt.column_int64(COLUMN_ID);
-			this.remoteID = stmt.column_int64(COLUMN_REMOTE_ID);
-			this.fileID = stmt.column_int64(COLUMN_FILE_ID);
-			this.name = stmt.column_text(COLUMN_VERSION_NAME);
-			this.datetimeEdited = create_date(stmt.column_text(COLUMN_DATETIME_EDITED));
 		}
 	
 		public static Gee.List<SyncedFileVersion> find_versions_for_file(SyncedFile file, Database database)
@@ -161,6 +196,14 @@ namespace Barabas.Client
 			{
 			}
 			this.ID = database.last_insert_row_id();
+		}
+		
+		private void remove()
+		{
+			Sqlite.Statement stmt = database.prepare("DELETE FROM SyncedFileVersion
+			    WHERE ID=@ID;");
+			stmt.bind_int64(stmt.bind_parameter_index("@ID"), ID);
+			stmt.step();
 		}
 		
 		private DateTime create_date(string date)

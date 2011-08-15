@@ -42,6 +42,11 @@ namespace Barabas.Client
 
 		public override Json.Generator? execute ()
 		{
+			if (version_to_sync.is_deprecated())
+			{
+				stdout.printf("Not uploading, newer version arrived.");
+				return null;
+			}
 			Json.Generator gen;
 			var version_request = json_message(out gen);
 		
@@ -60,6 +65,9 @@ namespace Barabas.Client
 			/**
 			 TODO: limit the number of uploads
 			**/
+			
+			
+			
 			upload.begin(response);
 		}
 	
@@ -75,6 +83,10 @@ namespace Barabas.Client
 			}
 	
 			var socket = new GLib.SocketClient();
+			
+			stdout.printf("Pausing so to prepare...");
+			Timeout.add_seconds(20, upload.callback);
+			yield;
 			
 			GLib.SocketConnection connection = null;
 			int connect_tries = 0;
@@ -98,6 +110,13 @@ namespace Barabas.Client
 		
 			try
 			{
+				if (version_to_sync.is_deprecated())
+				{
+					stdout.printf("Upload canceled\n");
+					canceled();
+					return;
+				}
+			
 				version_to_sync.upload_started();
 		
 				GLib.File file = GLib.File.new_for_uri(local_file_to_upload.uri);
@@ -121,6 +140,7 @@ namespace Barabas.Client
 				}
 		
 				connection.close();
+				local_file_to_upload.update_last_modification_time();
 			
 				success(version_to_sync, commit_id);
 			}
@@ -134,6 +154,7 @@ namespace Barabas.Client
 			}
 		}
 	
+		public signal void canceled();
 		public signal void success(SyncedFileVersion file_version, int64 commit_id);
 	}
 }

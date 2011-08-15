@@ -64,6 +64,7 @@ namespace Barabas.Client
 					stdout.printf("STATUS CHANGED");
 					DownloadLogCommand command = new DownloadLogCommand(database);
 					command.success.connect(on_finished_download_first_log);
+					command.download_new_version.connect(on_download_new_version);
 					queue_command(command);
 				}
 			});
@@ -216,8 +217,30 @@ namespace Barabas.Client
 			}
 		
 			DownloadLogCommand command = new DownloadLogCommand(database);
+			command.download_new_version.connect(on_download_new_version);
 			queue_command(command);
 			return true;
+		}
+		
+		private void on_download_new_version(SyncedFile synced_file,
+		                                     SyncedFileVersion synced_file_version)
+		{
+			stdout.printf("ON DOWNLOAD NEW VERSION\n");
+			LocalFile? local_file = LocalFile.from_file_id(synced_file.ID, database);
+			if (local_file == null)
+			{
+				stdout.printf("NO LOCAL FILE\n");
+				return;
+			}
+			
+			RequestDownloadCommand request_download = new RequestDownloadCommand(synced_file_version,
+			                                                                     local_file.uri,
+			                                                                     connected_host);
+			request_download.download_stopped.connect(() => {
+				local_file.update_last_modification_time();
+			});
+			stdout.printf("QUEUE FOR DOWNLOAD\n");
+			queue_command(request_download);
 		}
 
 		/* Network stuff */
@@ -227,7 +250,7 @@ namespace Barabas.Client
 			size_t length;
 			var json_str = gen.to_data(out length);
 			json_str += "\n";
-			GLib.log("protocol", LogLevelFlags.LEVEL_INFO, "Send message: %s", json_str);
+			//GLib.log("protocol", LogLevelFlags.LEVEL_INFO, "Send message: %s", json_str);
 			try
 			{
 				connection.output_stream.write(json_str.data);
@@ -280,7 +303,7 @@ namespace Barabas.Client
 			}
 			if (read_status == GLib.IOStatus.NORMAL)
 			{
-				GLib.log("protocol", LogLevelFlags.LEVEL_INFO, "Received message: %s", buffer);
+				//GLib.log("protocol", LogLevelFlags.LEVEL_INFO, "Received message: %s", buffer);
 				Json.Object message;
 				try
 				{

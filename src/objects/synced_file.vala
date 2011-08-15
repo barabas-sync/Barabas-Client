@@ -39,6 +39,9 @@ namespace Barabas.DBus.Server
 					// FIXME: is their something sensible we can do?
 				}
 			});
+			this.client_synced_file.removed_version.connect((old_version) => {
+				version_removed(old_version.ID);
+			});
 		}
 		
 		public string get_name()
@@ -121,6 +124,7 @@ namespace Barabas.DBus.Server
 		
 		public signal void tagged(string tag);
 		public signal void version_added(int64 synced_file_id);
+		public signal void version_removed(int64 synced_file_id);
 		
 		private void publish_version(Client.SyncedFileVersion sf_version) throws GLib.IOError
 		{

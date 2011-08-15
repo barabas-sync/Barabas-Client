@@ -112,6 +112,7 @@ namespace Barabas.Client
 			        uri TEXT,
 			        parentURI TEXT,
 			        displayName TEXT,
+			        lastModificationTime INTEGER(8),
 			        FOREIGN KEY(fileID) REFERENCES SyncedFile(ID)
 			                ON DELETE CASCADE
 			    );");

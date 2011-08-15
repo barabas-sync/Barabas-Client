@@ -120,15 +120,22 @@ namespace Barabas.DBus.Server
 			}
 			if (local_file != null && local_file.is_synced())
 			{
+				if (!local_file.is_modified())
+				{
+					// It is possible that this is our own download, so ignore
+					stdout.printf("IGNORINGSSD\n");
+					return;
+				}
 				Client.SyncedFile? synced_file = Client.SyncedFile.from_ID(database, local_file.syncedID);
 				if (synced_file != null && synced_file.has_remote())
 				{
 					// See if the last version is uploaded, or uploading.
 					// If so, add another version
 					Client.SyncedFileVersion last_version = synced_file.versions().last();
-					if (!last_version.is_remote())
+					if (!last_version.is_uploading_or_uploaded())
 					{
-						return;
+						last_version.deprecate();
+						synced_file.remove_version(last_version);
 					}
 					DateTime date = new DateTime.now_local();
 					Client.SyncedFileVersion new_version = new Client.SyncedFileVersion(

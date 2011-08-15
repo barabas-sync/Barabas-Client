@@ -108,6 +108,7 @@ namespace Barabas.DBus.Server
 		{
 			local_file.initiate_upload.connect(on_initiate_upload);
 			local_file.synced.connect(on_new_local_file);
+			file_monitor_client.add_directory(local_file.parent_uri);
 		}
 		
 		private void on_new_local_file(Client.LocalFile local_file,

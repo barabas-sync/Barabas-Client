@@ -49,14 +49,14 @@ namespace Barabas.Client
 	
 		private async void sync_log(Json.Array entries)
 		{
-			GLib.log("test", LogLevelFlags.LEVEL_INFO, "Download log entries: %u", entries.get_length());
+			//GLib.log("test", LogLevelFlags.LEVEL_INFO, "Download log entries: %u", entries.get_length());
 			for (int current = 0; current < entries.get_length(); current++)
 			{
 				Json.Object json_entry = entries.get_object_element(current);
 			
 				int64 remote_id = json_entry.get_int_member("log-id");
 				
-				GLib.log("test", LogLevelFlags.LEVEL_INFO, "Handling: %lli", remote_id);
+				//GLib.log("test", LogLevelFlags.LEVEL_INFO, "Handling: %lli", remote_id);
 				
 				HistoryLogEntry? db_entry = HistoryLogEntry.find_by_remote(remote_id, database);
 				if (db_entry == null)
@@ -148,7 +148,13 @@ namespace Barabas.Client
 						{
 							sf_version = new SyncedFileVersion.from_remote(
 						    	version_id, file_id, version_name, time_edited, database);
-							file.remote_new_version(sf_version);
+							bool should_download = file.remote_new_version(sf_version);
+							
+							if (should_download)
+							{
+								stdout.printf("SHOULD DOWNLOAD\n");
+								download_new_version(file, sf_version);
+							}
 						}
 					}
 				}
@@ -158,6 +164,7 @@ namespace Barabas.Client
 			success();
 		}
 		
+		public signal void download_new_version(SyncedFile file, SyncedFileVersion sf_version);
 		public signal void success();
 	}
 }

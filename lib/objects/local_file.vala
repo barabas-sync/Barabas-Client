@@ -27,6 +27,7 @@ namespace Barabas.Client
 		public string parent_uri { get; private set; }
 		public string display_name { get; private set; }
 		private string mimetype;
+		private TimeVal last_modification_time;
 		
 		private Database database;
 		public static LocalFileCache cache;
@@ -43,6 +44,7 @@ namespace Barabas.Client
 			           null);
 			this.display_name = file_info.get_display_name();
 			this.mimetype = file_info.get_content_type();
+			this.last_modification_time = GLib.TimeVal();
 			
 			this.database = null;
 			cache.add(this);
@@ -64,6 +66,7 @@ namespace Barabas.Client
 			           null);
 			this.display_name = file_info.get_display_name();
 			this.mimetype = synced_file.mimetype;
+			this.last_modification_time = GLib.TimeVal();
 			
 			insert();
 			cache.add(this);
@@ -78,6 +81,7 @@ namespace Barabas.Client
 			this.uri = stmt.column_text(2);
 			this.parent_uri = stmt.column_text(3);
 			this.display_name = stmt.column_text(4);
+			this.last_modification_time = timeval_from_int64(stmt.column_int64(5));
 			
 			cache.add(this);
 		}
@@ -182,12 +186,69 @@ namespace Barabas.Client
 		
 		public void remove()
 		{
+		
 			if (database != null)
 			{
 				Sqlite.Statement delete_stmt = database.prepare("
 				    DELETE FROM LocalFile WHERE ID=@ID");
 				delete_stmt.bind_int64(delete_stmt.bind_parameter_index("@ID"), ID);
 				delete_stmt.step();
+			}
+		}
+		
+		public void update_last_modification_time()
+		{
+			if (database != null)
+			{
+				stdout.printf("UPDATING LOCAL TIME\n");
+				GLib.File file = GLib.File.new_for_uri(uri);
+				GLib.FileInfo file_info = file.query_info(
+			           GLib.FILE_ATTRIBUTE_TIME_MODIFIED + "," +
+			           GLib.FILE_ATTRIBUTE_TIME_MODIFIED_USEC,
+			           GLib.FileQueryInfoFlags.NONE,
+			           null);
+				file_info.get_modification_time(out last_modification_time);
+				stdout.printf("NEW TIME = %s\n", last_modification_time.to_iso8601());
+			
+				Sqlite.Statement update_stmt = database.prepare("
+				    UPDATE LocalFile
+				           SET lastModificationTime=@lastModificationTime
+				           WHERE ID=@ID");
+				update_stmt.bind_int64(update_stmt.bind_parameter_index("@ID"), ID);
+				update_stmt.bind_int64(update_stmt.bind_parameter_index("@lastModificationTime"), int64_from_timeval(last_modification_time));
+				update_stmt.step();
+			}
+		}
+		
+		public bool is_modified()
+		{
+			GLib.File file = GLib.File.new_for_uri(uri);
+				GLib.FileInfo file_info = file.query_info(
+			           GLib.FILE_ATTRIBUTE_TIME_MODIFIED + "," +
+			           GLib.FILE_ATTRIBUTE_TIME_MODIFIED_USEC,
+			           GLib.FileQueryInfoFlags.NONE,
+			           null);
+			TimeVal new_modification_time;
+			file_info.get_modification_time(out new_modification_time);
+			
+			stdout.printf(new_modification_time.to_iso8601() + "\n");
+			
+			stdout.printf(last_modification_time.to_iso8601() + "\n\n");
+			
+			if (new_modification_time.tv_sec > last_modification_time.tv_sec)
+			{
+				stdout.printf("SEC ARE NEWER...\n");
+				return true;
+			}
+			else if (new_modification_time.tv_sec == last_modification_time.tv_sec &&
+			         new_modification_time.tv_usec > last_modification_time.tv_usec)
+			{
+				stdout.printf("ONLY USEC ARE NEWER...\n");
+				return true;
+			}
+			else
+			{
+				return false;
 			}
 		}
 		
@@ -198,15 +259,30 @@ namespace Barabas.Client
 		private void insert()
 		{
 			Sqlite.Statement insert_stmt = database.prepare("INSERT INTO 
-			         LocalFile (fileID, uri, parentURI, displayName)
-			         VALUES (@fileID, @uri, @parentURI, @displayName);");
+			         LocalFile (fileID, uri, parentURI, displayName, lastModificationTime)
+			         VALUES (@fileID, @uri, @parentURI, @displayName, @lastModificationTime);");
 			insert_stmt.bind_int64(insert_stmt.bind_parameter_index("@fileID"), syncedID);
 			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@uri"), uri);
 			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@parentURI"), parent_uri);
 			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@displayName"), display_name);
+			insert_stmt.bind_int64(insert_stmt.bind_parameter_index("@lastModificationTime"), int64_from_timeval(last_modification_time));
 			insert_stmt.step();
 			
 			this.ID = database.last_insert_row_id();
+		}
+		
+		private TimeVal timeval_from_int64(int64 time)
+		{
+			TimeVal timeval = GLib.TimeVal();
+			timeval.tv_sec = (long)time / (1000 * 1000);
+			timeval.tv_usec = (long)time % (1000 * 1000);
+			return timeval;
+		}
+		
+		private int64 int64_from_timeval(TimeVal timeval)
+		{
+			int64 time = timeval.tv_sec * (1000 * 1000) + timeval.tv_usec;
+			return time;
 		}
 	}
 }

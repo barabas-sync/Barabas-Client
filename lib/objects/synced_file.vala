@@ -202,6 +202,12 @@ namespace Barabas.Client
 			new_version(version, true);
 		}
 		
+		public void remove_version(SyncedFileVersion version)
+		{
+			version_list.remove_at(version_list.index_of(version));
+			removed_version(version);
+		}
+		
 		public bool has_remote()
 		{
 			return remoteID != 0;
@@ -219,10 +225,20 @@ namespace Barabas.Client
 			statement.step();
 		}
 		
-		internal void remote_new_version(SyncedFileVersion sf_version)
+		internal bool remote_new_version(SyncedFileVersion sf_version)
 		{
+			if (!version_list.is_empty)
+			{
+				if (!version_list.last().is_remote())
+				{
+					version_list.insert(version_list.size - 1, sf_version);
+					new_version(sf_version, false);
+					return false;
+				}
+			}
 			version_list.add(sf_version);
 			new_version(sf_version, false);
+			return true;
 		}
 	
 		private void internal_tag(string tag, bool synced)
@@ -294,5 +310,6 @@ namespace Barabas.Client
 		public signal void untagged(string tag, bool local);
 		
 		public signal void new_version(SyncedFileVersion new_version, bool local);	
+		public signal void removed_version(SyncedFileVersion old_version);
 	}
 }
