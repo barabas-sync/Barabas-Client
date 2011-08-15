@@ -60,11 +60,7 @@ namespace Barabas.Client
 			
 			GLib.File file = GLib.File.new_for_uri(uri);
 			this.parent_uri = file.get_parent().get_uri();
-			GLib.FileInfo file_info = file.query_info(
-			           GLib.FILE_ATTRIBUTE_STANDARD_DISPLAY_NAME,
-			           GLib.FileQueryInfoFlags.NONE,
-			           null);
-			this.display_name = file_info.get_display_name();
+			this.display_name = synced_file.display_name;
 			this.mimetype = synced_file.mimetype;
 			this.last_modification_time = GLib.TimeVal();
 			
