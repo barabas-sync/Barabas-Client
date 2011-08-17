@@ -29,6 +29,76 @@ namespace Barabas.Client
 	{
 		string username;
 		string password;
+		
+		public UserPasswordAuthentication(string u, string p)
+		{
+			username = u;
+			password = p;
+		}
+	}
+
+	internal class MyStupidQueue<G> : GLib.Object, Gee.Iterable<G>, Gee.Collection<G>, Gee.Queue<G>
+	{
+		private Gee.ArrayList<G> list;
+	
+		public int capacity { get { return Gee.Queue.UNBOUNDED_CAPACITY; } }
+		public int remaining_capacity { get { return Gee.Queue.UNBOUNDED_CAPACITY; } }
+		public bool is_full { get { return false; } }
+		
+		public int size { get { return list.size; } }
+		public bool is_empty { get { return list.is_empty; } }
+		public Gee.Collection<G> read_only_view { owned get { return list.read_only_view; } }
+	
+		public MyStupidQueue()
+		{
+			list = new Gee.ArrayList<G>();
+		}
+		
+		public Type element_type { get { return list.element_type; } }
+		
+		public bool contains (G g) { return list.contains(g); }
+		public bool add (G g) { offer(g); return true; }
+		public bool remove (G g) { return false; }
+		public void clear () { list.clear(); }
+		public bool add_all (Gee.Collection<G> g) { return false; }
+		public bool contains_all (Gee.Collection<G> g) { return false; }
+		public bool remove_all (Gee.Collection<G> g) { return false; }
+		public bool retain_all (Gee.Collection<G> g) { return false; }
+		public G[] to_array () { return list.to_array(); }
+	
+		public bool offer(G g)
+		{
+			list.insert(list.size, g);
+			return true;
+		}
+		
+		public G peek()
+		{
+			if (is_empty)
+				return null;
+			return list.first();
+		}
+		
+		public G poll()
+		{
+			if (is_empty)
+				return null;
+			G g = list.first();
+			list.remove_at(0);
+			
+			return g;
+		}
+		
+		public int drain(Gee.Collection<G> recp, int amount = -1)
+		{
+			recp.add(poll());
+			return 1;
+		}
+		
+		public Gee.Iterator<G> iterator()
+		{
+			return list.iterator();
+		}
 	}
 
 	public class Connection
@@ -71,7 +141,7 @@ namespace Barabas.Client
 			enabled_authentication_methods = new Gee.LinkedList<string>();
 		
 			current_request = null;
-			request_queue = new Gee.PriorityQueue<ICommand> ();
+			request_queue = new MyStupidQueue<ICommand> ();
 		}
 	
 		public void enable_authentication_method(string method)
@@ -134,11 +204,10 @@ namespace Barabas.Client
 				status_changed(ConnectionStatus.CONNECTED, "");
 			});
 			login.failure.connect((msg) => {
-				stdout.printf("Failed Auth %s\n", msg);
 				status_changed(ConnectionStatus.AUTHENTICATION_FAILED, msg);
 			});
-			current_request = login;
-			send_message(login.execute());
+			request_queue.offer(login);
+			handle_next_request();
 		}
 		
 		public void authenticate_cancel()
@@ -151,7 +220,7 @@ namespace Barabas.Client
 
 		public void queue_command (ICommand command)
 		{
-			if (current_request != null) // TODO:: && authenticated
+			if (current_request != null || connection_status != ConnectionStatus.CONNECTED)
 			{
 				request_queue.offer (command);
 			}
