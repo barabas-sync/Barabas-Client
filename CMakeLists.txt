@@ -54,3 +54,22 @@ vala_precompile(BARABAS_DBUS_C
                 CUSTOM_VAPIS ${CMAKE_BINARY_DIR}/barabas_client.vapi)
 add_executable(barabas-dbus ${BARABAS_DBUS_C})
 target_link_libraries(barabas-dbus barabas-client)
+
+configure_file(be.ac.ua.comp.Barabas.service.in
+               be.ac.ua.comp.Barabas.service)
+
+install(TARGETS barabas-dbus
+                RUNTIME DESTINATION bin)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/be.ac.ua.comp.Barabas.service
+              DESTINATION /usr/share/dbus-1/services)
+
+
+INCLUDE(CPack)
+# Package generic stuff
+SET(CPACK_GENERATOR "RPM")
+SET(CPACK_PACKAGE_NAME "barabas-dbus")
+SET(CPACK_PACKAGE_VERSION "0.0.1")
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The Barabas DBUS program.")
+
+# RPM / Fedora specific stuff
+SET(CPACK_RPM_PACKAGE_REQUIRES "glib2 >= 2.28, json-glib >= 0.12, sqlite >= 3.7")

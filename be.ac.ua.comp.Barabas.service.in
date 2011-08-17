@@ -1,0 +1,4 @@
+# DBus service activation config
+[D-BUS Service]
+Name=be.ac.ua.comp.Barabas
+Exec=@CMAKE_INSTALL_PREFIX@/bin/barabas-dbus
