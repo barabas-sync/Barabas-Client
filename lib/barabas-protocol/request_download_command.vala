@@ -75,6 +75,7 @@ namespace Barabas.Client
 			Json.Object channel_info = response.get_object_member("channel-info");
 			int64 port = channel_info.get_int_member("port");
 			string host = channel_info.get_string_member("host");
+			string secret = channel_info.get_string_member("secret");
 			if (host == null)
 			{
 				host = connection_host;
@@ -85,13 +86,15 @@ namespace Barabas.Client
 			SocketConnection connection;
 			try
 			{
-				connection = socket.connect_to_host(host, (uint16)port);
+				connection = yield socket.connect_to_host_async(host, (uint16)port);
 			}
 			catch (GLib.Error connect_error)
 			{
 				// TODO: retry for a while
 				return;
 			}
+			
+			yield connection.output_stream.write_async(secret.data);
 			download_started();
 		
 			GLib.File file = GLib.File.new_for_uri (download_uri);
