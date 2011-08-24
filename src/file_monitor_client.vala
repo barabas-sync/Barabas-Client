@@ -22,12 +22,15 @@ namespace Barabas.DBus.Server
 	class FileMonitorClient
 	{
 		private Gee.Map<string, FileMonitor> file_monitors;
+		private Gee.Map<string, DateTime?> deleted_files;
+		
 		private Client.Database database;
 
 		public FileMonitorClient(Client.Database database)
 		{
 			this.database = database;
 			file_monitors = new Gee.HashMap<string, FileMonitor>();
+			deleted_files = new Gee.HashMap<string, DateTime?>();
 			var select_paths = database.prepare("SELECT parentURI FROM LocalFile 
 				    GROUP BY parentURI");
 			while (select_paths.step() == Sqlite.ROW)
@@ -54,6 +57,7 @@ namespace Barabas.DBus.Server
 					stdout.printf ("Creating monitor for %s failed\n", uri);
 				}
 			}
+			Timeout.add_seconds(120, clear_deleted_files_list);
 		}
 	
 		public void add_directory(string uri)
@@ -97,9 +101,11 @@ namespace Barabas.DBus.Server
 				case FileMonitorEvent.DELETED:
 					file_deleted(file);
 					break;
+				case FileMonitorEvent.CREATED:
+					file_created(file);
+					break;
 				default:
 					// We are not intrested in
-					//	* new files
 					//  * unmounts
 					//	* attribute changes
 					break;
@@ -182,6 +188,7 @@ namespace Barabas.DBus.Server
 	
 		private void file_deleted(GLib.File file)
 		{
+			stdout.printf("DEL %s\n", file.get_uri());
 			// Delete the file from our database
 			Client.LocalFile? local_file;
 			try
@@ -197,8 +204,50 @@ namespace Barabas.DBus.Server
 			}
 			if (local_file != null)
 			{
-				local_file.remove();
+				deleted_files[file.get_uri()] = new DateTime.now_local();
 			}
+		}
+		
+		private void file_created(GLib.File file)
+		{
+			if (file.get_uri() in deleted_files.keys)
+			{
+				DateTime delete_time = deleted_files[file.get_uri()];
+				TimeSpan difference = new DateTime.now_local().difference(delete_time);
+				if (difference < TimeSpan.SECOND * 10)
+				{
+					deleted_files.unset(file.get_uri());
+					file_edited(file);
+				}
+			}
+		}
+		
+		private bool clear_deleted_files_list()
+		{
+			Gee.Map<string, DateTime?> deleted_files_swap = new Gee.HashMap<string, DateTime?>();
+			foreach (string uri in deleted_files.keys)
+			{
+				DateTime delete_time = deleted_files[uri];
+				TimeSpan difference = new DateTime.now_local().difference(delete_time);
+				
+				if (difference > TimeSpan.SECOND * 10)
+				{
+					Client.LocalFile? local_file;
+					local_file = Client.LocalFile.from_uri(uri,
+			                                               database,
+			                                               false);
+					if (local_file != null)
+					{
+						local_file.remove();
+					}
+				}
+				else
+				{
+					deleted_files_swap[uri] = delete_time;
+				}
+			}
+			deleted_files = deleted_files_swap;
+			return true;
 		}
 	}
 }
