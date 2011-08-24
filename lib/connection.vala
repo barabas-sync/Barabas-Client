@@ -106,7 +106,7 @@ namespace Barabas.Client
 		private GLib.SocketClient socket;
 		private GLib.SocketConnection connection;
 		private GLib.IOChannel socketChannel;
-		private ConnectionStatus connection_status;
+		public ConnectionStatus connection_status { get; private set; }
 		
 		private Gee.List<string> enabled_authentication_methods;
 		private string[] current_authentication_methods;
@@ -159,6 +159,11 @@ namespace Barabas.Client
 		{
 			try
 			{
+				if (connection != null)
+				{
+					disconnect();
+				}
+			
 				status_changed(ConnectionStatus.CONNECTING);
 				socket = new GLib.SocketClient();
 				connect_cancellable = new GLib.Cancellable();
@@ -200,6 +205,14 @@ namespace Barabas.Client
 		public void connect_cancel()
 		{
 			connect_cancellable.cancel();
+		}
+		
+		public void disconnect()
+		{
+			connected_host = "";
+			socketChannel = null;
+			connection.close();
+			status_changed(ConnectionStatus.NOT_CONNECTED);
 		}
 		
 		public void authenticate_user_password(UserPasswordAuthentication authentication)
@@ -350,6 +363,16 @@ namespace Barabas.Client
 	
 		private bool data_received(GLib.IOChannel source, GLib.IOCondition condition)
 		{
+			if (socketChannel == null)
+			{
+				// Someone reconnected.
+				// This is on the old channel, and is probably a hangup
+				// we should not do anything. Changing the status
+				// will result in going from CONNECTING / AUTHENTICATING
+				// to DISCONNECT which is not true.
+				return false;
+			}
+		
 			if (condition != GLib.IOCondition.IN && 
 			    condition != GLib.IOCondition.OUT)
 			{

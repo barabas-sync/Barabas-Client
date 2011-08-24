@@ -167,9 +167,19 @@ namespace Barabas.DBus.Server
 		                                  string message);
 		public signal void user_password_authentication_request();
 		
+		public Client.ConnectionStatus get_status()
+		{
+			return client_connection.connection_status;
+		}
+		
 		public void connect_cancel()
 		{
 			client_connection.connect_cancel();
+		}
+		
+		public void disconnect()
+		{
+			client_connection.disconnect();
 		}
 
 		public int search(string search_query)
