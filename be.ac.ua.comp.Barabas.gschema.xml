@@ -1,0 +1,11 @@
+<schemalist>
+	<schema id="be.ac.ua.comp.Barabas" path="/be/ac/ua/comp/Barabas/">
+		<key name="is-configured" type="b">
+			<default>false</default>
+		</key>
+
+		<key name="recently-used-hosts" type="a(si)">
+			<default>[('barabas.mooo.com',2188)]</default>
+		</key>
+	</schema>
+</schemalist>

@@ -51,6 +51,16 @@ namespace Barabas.DBus.Server
 		private ResourceManager<Search> current_searches;
 		private ResourceManager<Download> current_downloads;
 		private LocalFileResourceManager local_file_resource_manager;
+		
+		private Settings settings;
+		private static const string SCHEMA = "be.ac.ua.comp.Barabas";
+		private static const string PATH = "/be/ac/ua/comp/Barabas/";
+	
+		public struct HostConfiguration
+		{
+			public string host;
+			public int port;
+		}
 	
 		public MainServer(GLib.MainLoop loop) throws Barabas.Client.DatabaseError
 		{
@@ -70,6 +80,8 @@ namespace Barabas.DBus.Server
 			this.client_connection.user_password_authentication_request.connect(() => {
 				user_password_authentication_request();
 			});
+			
+			settings = new GLib.Settings.with_path(SCHEMA, PATH);
 			
 			Bus.own_name (BusType.SESSION,
 			              "be.ac.ua.comp.Barabas",
@@ -150,6 +162,7 @@ namespace Barabas.DBus.Server
 		{
 			current_host = hostname;
 			client_connection.connect(hostname, port);
+			add_recently_used_host(hostname, port);
 		}
 		
 		public void authenticate_user_password(Client.UserPasswordAuthentication auth)
@@ -221,6 +234,80 @@ namespace Barabas.DBus.Server
 				client_connection.queue_command(download_command);
 			});
 			return id;
+		}
+		
+		public HostConfiguration[] get_recently_used_hosts()
+		{
+			Variant host_list = settings.get_value("recently-used-hosts");
+			Gee.List<HostConfiguration?> list = new Gee.ArrayList<HostConfiguration?>();
+			VariantIter iter = host_list.iterator();
+			
+			string host;
+			int port;
+			while (iter.next("(si)", out host, out port))
+			{
+				HostConfiguration entry = HostConfiguration();
+				entry.host = host;
+				entry.port = port;
+				list.add(entry);
+			}
+			list.sort(compare_host_configuration);
+			HostConfiguration[] return_list = new HostConfiguration[list.size];
+			
+			int i = 0;
+			foreach (HostConfiguration ahost in list)
+			{
+				return_list[i] = ahost;
+				i++;
+			}
+			
+			return return_list;
+		}
+		
+		private static int compare_host_configuration(HostConfiguration? a,
+		                                              HostConfiguration? b)
+		{
+			if (a.host > b.host)
+			{
+				return 1;
+			}
+			else if (a.host < b.host)
+			{
+				return -1;
+			}
+			else
+			{
+				return 0;
+			}
+		}
+		
+		private void add_recently_used_host(string newhost, int16 newport)
+		{
+			Variant host_list = settings.get_value("recently-used-hosts");
+			VariantIter iter = host_list.iterator();
+			
+			bool found = false;
+			Variant[] hosts = {};
+			string host;
+			int port;
+			Variant? current_variant;
+			while ((current_variant = iter.next_value()) != null)
+			{
+				current_variant.get("(si)", out host, out port);
+				if (host == newhost)
+				{
+					found = true;
+				}
+				hosts += current_variant;
+			}
+			
+			if (! found)
+			{
+				hosts += new Variant("(si)", newhost, newport);
+			}
+			
+			settings.set_value("recently-used-hosts",
+			                   new Variant.array(new VariantType("(si)"), hosts));
 		}
 		
 		private void on_new_synced_file(Client.SyncedFile synced_file)

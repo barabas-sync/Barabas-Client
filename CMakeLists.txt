@@ -65,6 +65,10 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/be.ac.ua.comp.Barabas.service
               DESTINATION /usr/share/dbus-1/services)
 
 
+install(FILES be.ac.ua.comp.Barabas.gschema.xml
+              DESTINATION ${CMAKE_INSTALL_PREFIX}/share/glib-2.0/schemas)
+install(SCRIPT "compile-schemas.cmake")
+
 INCLUDE(CPack)
 # Package generic stuff
 SET(CPACK_GENERATOR "RPM")
