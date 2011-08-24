@@ -31,6 +31,11 @@ namespace Barabas.Client
 
 		public override Json.Generator? execute()
 		{
+			if (file_to_sync.has_remote())
+			{
+				return null;
+			}
+		
 			Json.Generator gen;
 			var create_file = json_message(out gen);
 			create_file.set_string_member("request", command_type);

@@ -160,6 +160,27 @@ namespace Barabas.Client
 			return local_file;
 		}
 		
+		public static Gee.List<LocalFile> all(Database database)
+		{
+			Sqlite.Statement find = database.prepare("SELECT * FROM LocalFile");
+			
+			Gee.List<LocalFile> list = new Gee.ArrayList<LocalFile>();
+			
+			while (find.step() == Sqlite.ROW)
+			{
+				string uri = find.column_text(2);
+				if (cache.has(uri))
+				{
+					list.add(cache.get(uri));
+				}
+				else
+				{
+					list.add(new LocalFile.from_statement(find, database));
+				}
+			}
+			return list;
+		}
+		
 		public void rename(string display_name, string uri)
 		{
 			this.display_name = display_name;
@@ -246,6 +267,11 @@ namespace Barabas.Client
 			{
 				return false;
 			}
+		}
+		
+		public bool exists()
+		{
+			return GLib.File.new_for_uri(uri).query_exists();
 		}
 		
 		public signal void synced(SyncedFile synced_file);

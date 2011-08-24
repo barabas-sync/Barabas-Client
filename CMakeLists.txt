@@ -34,6 +34,7 @@ vala_precompile(BARABAS_CLIENT_C
                          lib/connection.vala
                          lib/connection_status.vala
                          lib/database.vala
+                         lib/unsaved_changes_crawler.vala
                 PACKAGES glib-2.0 gio-2.0 gee-1.0 json-glib-1.0 sqlite3
                 GENERATE_VAPI barabas_client
                 )

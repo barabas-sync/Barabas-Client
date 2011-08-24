@@ -112,6 +112,7 @@ namespace Barabas.Client
 		private string[] current_authentication_methods;
 		
 		private Database database;
+		private UnsavedChangesCrawler unsaved_changes_crawler;
 		
 		private ICommand current_request;
 		private Gee.Queue<ICommand> request_queue;
@@ -136,12 +137,17 @@ namespace Barabas.Client
 					command.success.connect(on_finished_download_first_log);
 					command.download_new_version.connect(on_download_new_version);
 					queue_command(command);
+					unsaved_changes_crawler.crawl.begin();
+				} else {
+					unsaved_changes_crawler.stop();
+					request_queue.clear();
 				}
 			});
 			enabled_authentication_methods = new Gee.LinkedList<string>();
 		
 			current_request = null;
 			request_queue = new MyStupidQueue<ICommand> ();
+			unsaved_changes_crawler = new UnsavedChangesCrawler(this, database);
 		}
 	
 		public void enable_authentication_method(string method)
@@ -235,18 +241,23 @@ namespace Barabas.Client
 			}
 		}
 
+		internal void sync_file(SyncedFile synced_file)
+		{
+			NewFileCommand command = new NewFileCommand(synced_file);
+			command.success.connect((file_to_sync) => {
+				file_to_sync.tagged.connect(on_tagged_file);
+				file_to_sync.untagged.connect(on_untagged_file);
+			});
+			queue_command(command);
+		}
+
 		/* Watch the objects */
 		
 		private void on_added_synced_file(SyncedFile synced_file)
 		{
 			if (! synced_file.has_remote())
 			{
-				NewFileCommand command = new NewFileCommand(synced_file);
-				command.success.connect((file_to_sync) => {
-					file_to_sync.tagged.connect(on_tagged_file);
-					file_to_sync.untagged.connect(on_untagged_file);
-				});
-				queue_command(command);
+				sync_file(synced_file);
 			}
 			else
 			{

@@ -82,6 +82,7 @@ namespace Barabas.Client
 			this.fileID = stmt.column_int64(COLUMN_FILE_ID);
 			this.name = stmt.column_text(COLUMN_VERSION_NAME);
 			this.datetimeEdited = create_date(stmt.column_text(COLUMN_DATETIME_EDITED));
+			this.database = database;
 			this.deprecated = false;
 			
 			this.uploading_or_uploaded = (remoteID != 0);
@@ -173,6 +174,19 @@ namespace Barabas.Client
 			{
 				return null;
 			}
+		}
+		
+		public static Gee.List<SyncedFileVersion> unsynced(Database database)
+		{
+			Sqlite.Statement find = database.prepare("SELECT * FROM SyncedFileVersion WHERE remoteID IS NULL");
+			
+			Gee.List<SyncedFileVersion> list = new Gee.ArrayList<SyncedFileVersion>();
+			
+			while (find.step() == Sqlite.ROW)
+			{
+				list.add(new from_statement(find, database));
+			}
+			return list;
 		}
 		
 		private void insert()

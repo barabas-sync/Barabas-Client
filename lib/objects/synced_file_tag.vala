@@ -35,7 +35,7 @@ namespace Barabas.Client
 		
 		private Database database;
 		
-		private int64 file_id;
+		public int64 file_id { get; private set; }
 		public string tag { get; private set; }
 		private Status _status;
 		public Status status {
@@ -104,6 +104,20 @@ namespace Barabas.Client
 			statement.bind_text(statement.bind_parameter_index("@tag"), tag);
 			statement.step();
 			database = null;
+		}
+		
+		public static Gee.List<SyncedFileTag> unsynced(Database database)
+		{
+			Sqlite.Statement find = database.prepare("SELECT * FROM SyncedFileTag WHERE status != @synced");
+			find.bind_int(find.bind_parameter_index("@synced"), SyncedFileTag.Status.SYNCED);
+			
+			Gee.List<SyncedFileTag> list = new Gee.ArrayList<SyncedFileTag>();
+			
+			while (find.step() == Sqlite.ROW)
+			{
+				list.add(new SyncedFileTag.from_stmt(find, database));
+			}
+			return list;
 		}
 		
 		private void insert()

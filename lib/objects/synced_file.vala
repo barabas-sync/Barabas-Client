@@ -150,6 +150,27 @@ namespace Barabas.Client
 			}
 		}
 		
+		public static Gee.List<SyncedFile> unsynced(Database database)
+		{
+			Sqlite.Statement find = database.prepare("SELECT * FROM SyncedFile WHERE remoteID IS NULL");
+			
+			Gee.List<SyncedFile> list = new Gee.ArrayList<SyncedFile>();
+			
+			while (find.step() == Sqlite.ROW)
+			{
+				int64 ID = find.column_int64(COLUMN_ID);
+				if (cache.has(ID))
+				{
+					list.add(cache.get(ID));
+				}
+				else
+				{
+					list.add(new SyncedFile.from_result(database, find));
+				}
+			}
+			return list;
+		}
+		
 		public LocalFile? get_local_file()
 		{
 			return LocalFile.from_file_id(ID, database);
