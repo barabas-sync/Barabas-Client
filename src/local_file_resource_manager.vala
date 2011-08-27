@@ -67,6 +67,7 @@ namespace Barabas.DBus.Server
 		private void file_unpublished(AResource resource)
 		{
 			LocalFile local_file = (LocalFile)resource;
+			local_file.unpublished.disconnect(file_unpublished);
 			mapped_files.unset(local_file.get_uri());
 		}
 	}

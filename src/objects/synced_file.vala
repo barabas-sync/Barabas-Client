@@ -29,21 +29,16 @@ namespace Barabas.DBus.Server
 		{
 			this.published_versions = new Gee.HashSet<SyncedFileVersion>();
 			this.client_synced_file = client_synced_file;
-			this.client_synced_file.tagged.connect((tag, local) => { tagged(tag); });
-			this.client_synced_file.new_version.connect((new_version, local) => {
-				try
-				{
-					publish_version(new_version);
-					version_added(new_version.ID);
-				}
-				catch (GLib.IOError error)
-				{
-					// FIXME: is their something sensible we can do?
-				}
-			});
-			this.client_synced_file.removed_version.connect((old_version) => {
-				version_removed(old_version.ID);
-			});
+			this.client_synced_file.tagged.connect(on_tagged);
+			this.client_synced_file.new_version.connect(on_new_version);
+			this.client_synced_file.removed_version.connect(on_removed_version);
+		}
+		
+		~SyncedFile()
+		{
+			client_synced_file.tagged.disconnect(on_tagged);
+			client_synced_file.new_version.disconnect(on_new_version);
+			client_synced_file.removed_version.disconnect(on_removed_version);
 		}
 		
 		public string get_name()
@@ -139,6 +134,29 @@ namespace Barabas.DBus.Server
 				version.publish(dbus_path + "/versions/" + sf_version.ID.to_string(), dbus_connection);
 				published_versions.add(version);
 			}
+		}
+		
+		private void on_tagged(string tag, bool local)
+		{
+			tagged(tag);
+		}
+		
+		private void on_new_version(Client.SyncedFileVersion new_version, bool local)
+		{
+			try
+			{
+				publish_version(new_version);
+				version_added(new_version.ID);
+			}
+			catch (GLib.IOError error)
+			{
+				// FIXME: is their something sensible we can do?
+			}
+		}
+		
+		private void on_removed_version(Client.SyncedFileVersion old_version)
+		{
+			version_removed(old_version.ID);
 		}
 	}
 }

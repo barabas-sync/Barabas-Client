@@ -63,9 +63,8 @@ namespace Barabas.DBus.Server
 		
 		private void free_resource(AResource resource)
 		{
-			int id = 0;
 			stdout.printf("Cleaning from list\n");
-			while (id in mapped_resources.keys)
+			foreach (int id in mapped_resources.keys)
 			{
 				if (mapped_resources[id] == resource)
 				{

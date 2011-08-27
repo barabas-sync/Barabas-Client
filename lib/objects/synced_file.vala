@@ -61,7 +61,7 @@ namespace Barabas.Client
 			this.ID = database.last_insert_row_id();
 			cache.add(this);
 		}
-		
+
 		internal SyncedFile.create(Database database, string name, string mimetype)
 		{
 			this.display_name = name;

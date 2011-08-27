@@ -256,12 +256,15 @@ namespace Barabas.Client
 
 		internal void sync_file(SyncedFile synced_file)
 		{
-			NewFileCommand command = new NewFileCommand(synced_file);
-			command.success.connect((file_to_sync) => {
-				file_to_sync.tagged.connect(on_tagged_file);
-				file_to_sync.untagged.connect(on_untagged_file);
-			});
-			queue_command(command);
+			if (connection_status == ConnectionStatus.CONNECTED)
+			{
+				NewFileCommand command = new NewFileCommand(synced_file);
+				command.success.connect((file_to_sync) => {
+					file_to_sync.tagged.connect(on_tagged_file);
+					file_to_sync.untagged.connect(on_untagged_file);
+				});
+				queue_command(command);
+			}
 		}
 
 		/* Watch the objects */

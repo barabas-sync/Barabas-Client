@@ -38,6 +38,11 @@ namespace Barabas.DBus.Server
 			this.synced_file = null;
 		}
 		
+		~LocalFile()
+		{
+			this.client_local_file.synced.disconnect(on_synced);
+		}
+		
 		public string get_uri()
 		{
 			return this.client_local_file.uri;
@@ -95,11 +100,11 @@ namespace Barabas.DBus.Server
 		
 		internal override void unpublish()
 		{
-			base.unpublish();
 			if (synced_file != null)
 			{
 				synced_file.unpublish();
 			}
+			base.unpublish();
 		}
 		
 		private void on_synced(Client.SyncedFile client_synced_file)
