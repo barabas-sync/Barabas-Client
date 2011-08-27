@@ -26,17 +26,24 @@ namespace Barabas.DBus.Server
 		
 		private string search_query;
 		private Gee.Set<int64?> results;
+		private Gee.Set<SyncedFile> published_objects;
 
 		public Search(string search_query, Client.Database database)
 		{
 			this.database = database;
 			this.search_query = search_query;
 			this.results = new Gee.HashSet<int64?>();
+			this.published_objects = new Gee.HashSet<SyncedFile>();
 		}
 		
 		public int64[] get_results()
 		{
 			return results.to_array();
+		}
+		
+		public void free()
+		{
+			unpublish();
 		}
 		
 		internal override void publish(string path,
@@ -72,13 +79,23 @@ namespace Barabas.DBus.Server
 				// TODO: use statement istead of complete new query when not in cache
 				SyncedFile sf = new SyncedFile(Client.SyncedFile.from_ID(database, file_id));
 				sf.publish(path + "/" + file_id.to_string(), connection);
+				published_objects.add(sf);
 			}
 		}
 		
-		protected override void do_register(string path,
+		internal override void unpublish()
+		{
+			foreach(SyncedFile sf in published_objects)
+			{
+				sf.unpublish();
+			}
+			base.unpublish();
+		}
+		
+		protected override uint do_register(string path,
 		                                    DBusConnection connection) throws GLib.IOError
 		{
-			connection.register_object(path, this);
+			return connection.register_object(path, this);
 		}
 	}
 }

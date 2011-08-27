@@ -59,10 +59,10 @@ namespace Barabas.DBus.Server
 		
 		internal signal void start_requested(Client.RequestDownloadCommand command);
 		
-		protected override void do_register(string path,
+		protected override uint do_register(string path,
 		                                    DBusConnection connection) throws GLib.IOError
 		{
-			connection.register_object(path, this);
+			return connection.register_object(path, this);
 		}
 	}
 }

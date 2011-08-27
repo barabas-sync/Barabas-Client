@@ -22,39 +22,34 @@ namespace Barabas.DBus.Server
 {
 	public abstract class AResource : Object
 	{
-		private int dbus_ref_count;
 		protected DBusConnection dbus_connection;
 		protected string dbus_path;
+		
+		private uint dbus_id;
 	
-		protected abstract void do_register(string path,
+		protected abstract uint do_register(string path,
 		                                    DBusConnection connection) throws GLib.IOError;
 	
 		internal virtual void publish(string path, DBusConnection connection) throws GLib.IOError
 		{
 			this.dbus_connection = connection;
 			this.dbus_path = path;
-			do_register(path, connection);
+			dbus_id = do_register(path, connection);
 		}
 		
 		internal virtual void unpublish()
 		{
-		}
-	
-		internal void refcount()
-		{
-			dbus_ref_count++;
-		}
-	
-		public void free()
-		{
-			dbus_ref_count--;
-		
-			if (dbus_ref_count == 0)
+			if (dbus_connection.unregister_object(dbus_id))
 			{
-				unpublish();
-				//on_freed_all();
+				stdout.printf("Unregistered %s\n", dbus_path);
 			}
+			else
+			{
+				stdout.printf("Tried to unregister %s\n", dbus_path);
+			}
+			unpublished();
 		}
-		//internal signal void on_freed_all();
+		
+		internal signal void unpublished();
 	}
 }

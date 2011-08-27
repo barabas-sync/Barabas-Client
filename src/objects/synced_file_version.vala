@@ -42,10 +42,10 @@ namespace Barabas.DBus.Server
 			return client_synced_file_version.datetimeEdited;
 		}*/
 
-		protected override void do_register(string path,
+		protected override uint do_register(string path,
 		                                    DBusConnection connection) throws GLib.IOError
 		{
-			connection.register_object(path, this);
+			return connection.register_object(path, this);
 		}
 		
 		public signal void upload_started();

@@ -26,6 +26,7 @@ namespace Barabas.DBus.Server
 		private Barabas.Client.Database database;
 		
 		private SyncedFile synced_file;
+		private uint dbus_ref_count;
 	
 		public LocalFile(Barabas.Client.LocalFile client_local_file,
 		                 Barabas.Client.Database database)
@@ -58,6 +59,24 @@ namespace Barabas.DBus.Server
 		}
 		
 		public signal void synced();
+		
+		internal void acquire()
+		{
+			dbus_ref_count++;
+		}
+		
+		public void release()
+		{
+			dbus_ref_count--;
+			
+			if (dbus_ref_count == 0)
+			{
+				released();
+				unpublish();
+			}
+		}
+		
+		public signal void released();
 
 		internal override void publish(string path, DBusConnection connection) throws GLib.IOError
 		{
@@ -97,10 +116,10 @@ namespace Barabas.DBus.Server
 			}
 		}
 		
-		protected override void do_register(string path,
+		protected override uint do_register(string path,
 		                                    DBusConnection connection) throws GLib.IOError
 		{
-			connection.register_object(path, this);
+			return connection.register_object(path, this);
 		}
 	}
 }

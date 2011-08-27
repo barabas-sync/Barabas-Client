@@ -28,6 +28,7 @@ namespace Barabas.DBus.Server
 		private DBusConnection dbus_connection;
 		
 		public delegate LocalFile CreateFileDelegate(string uri);
+		public delegate void AccessFileDelegate(LocalFile file);
 		
 		public LocalFileResourceManager(DBusConnection dbus_connection)
 		{
@@ -36,19 +37,21 @@ namespace Barabas.DBus.Server
 			this.dbus_connection = dbus_connection;
 		}
 		
-		public int get_id_for_uri(string uri, CreateFileDelegate create_file)
+		public int get_id_for_uri(string uri, CreateFileDelegate create_file,
+		                                      AccessFileDelegate access_file)
 		{
 			int object_id;
 			if (uri in mapped_files.keys)
 			{
 				object_id = mapped_files[uri];
-				resource_manager.get(object_id).refcount();
+				access_file(resource_manager.get(object_id));
 				return object_id;
 			}
 			else
 			{
 				LocalFile local_file = create_file(uri);
 				object_id = resource_manager.add(local_file);
+				local_file.unpublished.connect(file_unpublished);
 				mapped_files.set(uri, object_id);
 				return object_id;
 			}
@@ -59,6 +62,12 @@ namespace Barabas.DBus.Server
 			int object_id = resource_manager.add(local_file);
 			mapped_files.set(local_file.get_uri(), object_id);
 			return object_id;
+		}
+		
+		private void file_unpublished(AResource resource)
+		{
+			LocalFile local_file = (LocalFile)resource;
+			mapped_files.unset(local_file.get_uri());
 		}
 	}
 }

@@ -206,7 +206,11 @@ namespace Barabas.DBus.Server
 			return local_file_resource_manager.get_id_for_uri(uri, (the_uri) => {
 				Client.LocalFile local_file_client = Client.LocalFile.from_uri(uri, database);
 				LocalFile local_file = new LocalFile(local_file_client, database);
+				local_file.acquire();
 				return local_file;
+			}, (the_file) => {
+				stdout.printf("Acquiring %s", uri);
+				the_file.acquire();
 			});
 		}
 		

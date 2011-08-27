@@ -23,9 +23,11 @@ namespace Barabas.DBus.Server
 	public class SyncedFile : AResource
 	{
 		private Barabas.Client.SyncedFile client_synced_file;
+		private Gee.Set<SyncedFileVersion> published_versions;
 	
 		public SyncedFile(Barabas.Client.SyncedFile client_synced_file)
 		{
+			this.published_versions = new Gee.HashSet<SyncedFileVersion>();
 			this.client_synced_file = client_synced_file;
 			this.client_synced_file.tagged.connect((tag, local) => { tagged(tag); });
 			this.client_synced_file.new_version.connect((new_version, local) => {
@@ -113,13 +115,16 @@ namespace Barabas.DBus.Server
 		internal override void unpublish()
 		{
 			base.unpublish();
-			// Todo: unpublish all versions
+			foreach (SyncedFileVersion version in published_versions)
+			{
+				version.unpublish();
+			}
 		}
 		
-		protected override void do_register(string path,
+		protected override uint do_register(string path,
 		                                    DBusConnection connection) throws GLib.IOError
 		{
-			connection.register_object(path, this);
+			return connection.register_object(path, this);
 		}
 		
 		public signal void tagged(string tag);
@@ -132,6 +137,7 @@ namespace Barabas.DBus.Server
 			{
 				SyncedFileVersion version = new SyncedFileVersion(sf_version);
 				version.publish(dbus_path + "/versions/" + sf_version.ID.to_string(), dbus_connection);
+				published_versions.add(version);
 			}
 		}
 	}

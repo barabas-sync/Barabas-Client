@@ -51,7 +51,7 @@ namespace Barabas.DBus.Server
 				// FIXME: do something sensible
 			}
 			
-			//((AResource)resource).on_freed_all.connect(free_resource, resource);
+			a_resource.unpublished.connect(free_resource);
 			
 			return id;
 		}
@@ -61,9 +61,26 @@ namespace Barabas.DBus.Server
 			return mapped_resources.get(id);
 		}
 		
-		private void free_resource(Resource resource)
+		private void free_resource(AResource resource)
 		{
-			// TODO: implement
+			int id = 0;
+			stdout.printf("Cleaning from list\n");
+			while (id in mapped_resources.keys)
+			{
+				if (mapped_resources[id] == resource)
+				{
+					mapped_resources.unset(id);
+					stdout.printf("Found key and deleted %i\n", id);
+					return;
+					// Do not lower the first free key.
+					// Reason is that we are not sure the objects really disappear
+					// (Well, they are, but d-feet still shows them)
+					// Overwriting does not seem a problem but it is cleaner
+					// to just use a different ID.
+					// When many searches are done, the ID will wrap around
+					// and we just start over...
+				}
+			}
 		}
 		
 		private int find_free_id()
