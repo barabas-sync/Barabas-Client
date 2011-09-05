@@ -27,7 +27,7 @@ namespace Barabas.Client
 		public string parent_uri { get; private set; }
 		public string display_name { get; private set; }
 		private string mimetype;
-		private TimeVal last_modification_time;
+		private TimeVal? last_modification_time;
 		
 		private Database database;
 		public static LocalFileCache cache;
@@ -44,7 +44,7 @@ namespace Barabas.Client
 			           null);
 			this.display_name = file_info.get_display_name();
 			this.mimetype = file_info.get_content_type();
-			this.last_modification_time = GLib.TimeVal();
+			this.last_modification_time = null;
 			
 			this.database = null;
 			cache.add(this);
@@ -62,7 +62,7 @@ namespace Barabas.Client
 			this.parent_uri = file.get_parent().get_uri();
 			this.display_name = synced_file.display_name;
 			this.mimetype = synced_file.mimetype;
-			this.last_modification_time = GLib.TimeVal();
+			this.last_modification_time = null;
 			
 			insert();
 			cache.add(this);
@@ -77,7 +77,15 @@ namespace Barabas.Client
 			this.uri = stmt.column_text(2);
 			this.parent_uri = stmt.column_text(3);
 			this.display_name = stmt.column_text(4);
-			this.last_modification_time = timeval_from_int64(stmt.column_int64(5));
+			int64 l_m_t_as_int = stmt.column_int64(5);
+			if (l_m_t_as_int == 0)
+			{
+				this.last_modification_time = null;
+			}
+			else
+			{
+				this.last_modification_time = timeval_from_int64(l_m_t_as_int);
+			}
 			
 			cache.add(this);
 		}
@@ -239,6 +247,11 @@ namespace Barabas.Client
 		
 		public bool is_modified()
 		{
+			if (last_modification_time == null)
+			{
+				return true;
+			}
+
 			GLib.File file = GLib.File.new_for_uri(uri);
 				GLib.FileInfo file_info = file.query_info(
 			           GLib.FILE_ATTRIBUTE_TIME_MODIFIED + "," +
@@ -287,7 +300,14 @@ namespace Barabas.Client
 			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@uri"), uri);
 			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@parentURI"), parent_uri);
 			insert_stmt.bind_text(insert_stmt.bind_parameter_index("@displayName"), display_name);
-			insert_stmt.bind_int64(insert_stmt.bind_parameter_index("@lastModificationTime"), int64_from_timeval(last_modification_time));
+			if (last_modification_time != null)
+			{
+				insert_stmt.bind_int64(insert_stmt.bind_parameter_index("@lastModificationTime"), int64_from_timeval(last_modification_time));
+			}
+			else
+			{
+				insert_stmt.bind_null(insert_stmt.bind_parameter_index("@lastModificationTime"));
+			}
 			insert_stmt.step();
 			
 			this.ID = database.last_insert_row_id();
