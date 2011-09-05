@@ -73,6 +73,17 @@ namespace Barabas.Client
 	
 		private async void upload (Json.Object response)
 		{
+			// Wait for 2 seconds. It maybe possible that other versions come up.
+			Timeout.add_seconds(2, upload.callback);
+			yield;
+
+			if (version_to_sync.is_deprecated())
+			{
+				stdout.printf("Upload canceled\n");
+				canceled();
+				return;
+			}
+
 			int64 commit_id = response.get_int_member("commit-id");
 			Json.Object channel_info = response.get_object_member("channel-info");
 			int64 port = channel_info.get_int_member("port");
@@ -85,10 +96,6 @@ namespace Barabas.Client
 	
 			var socket = new GLib.SocketClient();
 			
-			stdout.printf("Pausing so to prepare...");
-			Timeout.add_seconds(20, upload.callback);
-			yield;
-			
 			GLib.SocketConnection connection = null;
 			int connect_tries = 0;
 			while (connection == null)
@@ -99,6 +106,7 @@ namespace Barabas.Client
 				}
 				catch (GLib.IOError iO_connect_error)
 				{
+					stdout.printf("Connection error.\n");
 					connect_tries++;
 					GLib.Timeout.add(200, upload.callback);
 					yield;
