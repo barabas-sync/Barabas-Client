@@ -233,6 +233,18 @@ namespace Barabas.DBus.Server
 			Download download = new Download(download_command);
 			int id = current_downloads.add(download);
 			
+			Client.LocalFile? local_file = Client.LocalFile.from_uri(uri, database);
+			if (local_file != null)
+			{
+				download_command.download_started.connect(() => {
+					local_file.start_downloading();
+				});
+				download_command.download_stopped.connect(() => {
+					local_file.update_last_modification_time();
+					local_file.stop_downloading();
+				});
+			}
+			
 			download.start_requested.connect( (download_command) => {
 				stdout.printf("QUEUEING\n");
 				client_connection.queue_command(download_command);

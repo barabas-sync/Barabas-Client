@@ -28,6 +28,7 @@ namespace Barabas.Client
 		public string display_name { get; private set; }
 		private string mimetype;
 		private TimeVal? last_modification_time;
+		private bool downloading;
 		
 		private Database database;
 		public static LocalFileCache cache;
@@ -45,6 +46,7 @@ namespace Barabas.Client
 			this.display_name = file_info.get_display_name();
 			this.mimetype = file_info.get_content_type();
 			this.last_modification_time = null;
+			this.downloading = false;
 			
 			this.database = null;
 			cache.add(this);
@@ -63,6 +65,7 @@ namespace Barabas.Client
 			this.display_name = synced_file.display_name;
 			this.mimetype = synced_file.mimetype;
 			this.last_modification_time = null;
+			this.downloading = false;
 			
 			insert();
 			cache.add(this);
@@ -86,6 +89,7 @@ namespace Barabas.Client
 			{
 				this.last_modification_time = timeval_from_int64(l_m_t_as_int);
 			}
+			this.downloading = false;
 			
 			cache.add(this);
 		}
@@ -285,6 +289,21 @@ namespace Barabas.Client
 		public bool exists()
 		{
 			return GLib.File.new_for_uri(uri).query_exists();
+		}
+		
+		public void start_downloading()
+		{
+			downloading = true;
+		}
+		
+		public void stop_downloading()
+		{
+			downloading = false;
+		}
+		
+		public bool is_downloading()
+		{
+			return downloading;
 		}
 		
 		public signal void synced(SyncedFile synced_file);

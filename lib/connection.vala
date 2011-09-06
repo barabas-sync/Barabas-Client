@@ -332,8 +332,13 @@ namespace Barabas.Client
 			RequestDownloadCommand request_download = new RequestDownloadCommand(synced_file_version,
 			                                                                     local_file.uri,
 			                                                                     connected_host);
+			
+			request_download.download_started.connect(() => {
+				local_file.start_downloading();
+			});
 			request_download.download_stopped.connect(() => {
 				local_file.update_last_modification_time();
+				local_file.stop_downloading();
 			});
 			stdout.printf("QUEUE FOR DOWNLOAD\n");
 			queue_command(request_download);

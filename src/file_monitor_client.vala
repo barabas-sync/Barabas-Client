@@ -126,7 +126,7 @@ namespace Barabas.DBus.Server
 			}
 			if (local_file != null && local_file.is_synced())
 			{
-				if (!local_file.is_modified())
+				if (!local_file.is_modified() || local_file.is_downloading())
 				{
 					// It is possible that this is our own download, so ignore
 					stdout.printf("IGNORINGSSD\n");
