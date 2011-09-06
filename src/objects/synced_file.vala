@@ -30,6 +30,7 @@ namespace Barabas.DBus.Server
 			this.published_versions = new Gee.HashSet<SyncedFileVersion>();
 			this.client_synced_file = client_synced_file;
 			this.client_synced_file.tagged.connect(on_tagged);
+			this.client_synced_file.untagged.connect(on_tag_removed);
 			this.client_synced_file.new_version.connect(on_new_version);
 			this.client_synced_file.removed_version.connect(on_removed_version);
 		}
@@ -123,6 +124,7 @@ namespace Barabas.DBus.Server
 		}
 		
 		public signal void tagged(string tag);
+		public signal void tag_removed(string tag);
 		public signal void version_added(int64 synced_file_id);
 		public signal void version_removed(int64 synced_file_id);
 		
@@ -139,6 +141,11 @@ namespace Barabas.DBus.Server
 		private void on_tagged(string tag, bool local)
 		{
 			tagged(tag);
+		}
+		
+		private void on_tag_removed(string tag, bool local)
+		{
+			tag_removed(tag);
 		}
 		
 		private void on_new_version(Client.SyncedFileVersion new_version, bool local)
